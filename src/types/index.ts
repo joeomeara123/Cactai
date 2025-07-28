@@ -1,39 +1,71 @@
-// User types
-export interface User {
-  id: string
-  email: string
-  created_at: string
-}
+import { z } from 'zod'
 
-// Impact tracking types
-export interface UserImpact {
-  queries_count: number
-  trees_planted: number
-  trees_progress: number // 0-1 for progress to next tree
-}
+// Validation schemas
+export const userSchema = z.object({
+  id: z.string().uuid(),
+  email: z.string().email(),
+  created_at: z.string().datetime(),
+})
 
-// Chat types
-export interface ChatMessage {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-  timestamp: Date
-  trees_added?: number
-}
+export const userImpactSchema = z.object({
+  queries_count: z.number().int().min(0),
+  trees_planted: z.number().min(0),
+  trees_progress: z.number().min(0).max(1),
+})
 
-// Query tracking types  
-export interface QueryMetrics {
+export const chatMessageSchema = z.object({
+  id: z.string().uuid(),
+  role: z.enum(['user', 'assistant']),
+  content: z.string(),
+  timestamp: z.date(),
+  trees_added: z.number().min(0).optional(),
+  model: z.string().optional(),
+})
+
+export const queryMetricsSchema = z.object({
+  id: z.string().uuid(),
+  user_id: z.string().uuid(),
+  input_tokens: z.number().int().min(0),
+  output_tokens: z.number().int().min(0),
+  input_cost: z.number().min(0),
+  output_cost: z.number().min(0),
+  total_cost: z.number().min(0),
+  trees_added: z.number().min(0),
+  model: z.string(),
+  created_at: z.string().datetime(),
+})
+
+export const globalStatsSchema = z.object({
+  total_users: z.number().int().min(0),
+  total_trees: z.number().min(0),
+  trees_this_week: z.number().min(0),
+  total_queries: z.number().int().min(0),
+})
+
+// Type inference from schemas
+export type User = z.infer<typeof userSchema>
+export type UserImpact = z.infer<typeof userImpactSchema>
+export type ChatMessage = z.infer<typeof chatMessageSchema>
+export type QueryMetrics = z.infer<typeof queryMetricsSchema>
+export type GlobalStats = z.infer<typeof globalStatsSchema>
+
+// Additional utility types
+export interface ChatSession {
   id: string
   user_id: string
-  input_tokens: number
-  output_tokens: number
-  trees_added: number
-  created_at: string
+  messages: ChatMessage[]
+  created_at: Date
+  updated_at: Date
 }
 
-// Global stats
-export interface GlobalStats {
-  total_users: number
-  total_trees: number
-  trees_this_week: number
+export interface ApiError {
+  code: string
+  message: string
+  details?: unknown
+}
+
+export interface ApiResponse<T = unknown> {
+  data?: T
+  error?: ApiError
+  success: boolean
 }
