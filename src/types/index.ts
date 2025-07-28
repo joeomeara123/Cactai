@@ -4,7 +4,23 @@ import { z } from 'zod'
 export const userSchema = z.object({
   id: z.string().uuid(),
   email: z.string().email(),
+  full_name: z.string().optional(),
+  avatar_url: z.string().optional(),
+  
+  // Impact tracking
+  total_queries: z.number().int().min(0).default(0),
+  total_input_tokens: z.number().int().min(0).default(0),
+  total_output_tokens: z.number().int().min(0).default(0),
+  total_cost: z.number().min(0).default(0),
+  total_donated: z.number().min(0).default(0),
+  trees_planted: z.number().min(0).default(0),
+  
+  // Preferences
+  preferred_model: z.string().default('gpt-4o-mini'),
+  selected_charity: z.string().default('reforestation'),
+  
   created_at: z.string().datetime(),
+  updated_at: z.string().datetime(),
 })
 
 export const userImpactSchema = z.object({
