@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CactAI 🌵
+
+**The Social Good LLM** - Like Ecosia for AI conversations. Every query you make helps plant trees!
+
+CactAI is an AI chatbot platform that donates 40% of revenue to environmental causes. Users can chat with advanced AI models while knowing their conversations are helping to reforest the planet.
+
+## Features
+
+- 🤖 **Multi-Model AI Chat** - Access GPT-4, Claude, and other leading AI models
+- 🌳 **Environmental Impact Tracking** - See how many trees your queries have planted
+- 🚀 **Fast & Responsive** - Built with Next.js 14 and modern web technologies
+- 🔐 **Secure Authentication** - Google sign-in via Supabase
+- 📊 **Personal Dashboard** - Track your environmental impact over time
+
+## Tech Stack
+
+- **Frontend**: Next.js 14, TypeScript, Tailwind CSS
+- **Backend**: Supabase (Database + Auth)
+- **AI**: OpenAI GPT-4, with support for multiple providers
+- **Hosting**: Vercel (Frontend), Supabase (Backend)
 
 ## Getting Started
 
-First, run the development server:
+1. **Clone and install dependencies**
+   ```bash
+   npm install
+   ```
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+2. **Set up environment variables**
+   ```bash
+   cp .env.local.example .env.local
+   # Add your Supabase and OpenAI credentials
+   ```
+
+3. **Run development server**
+   ```bash
+   npm run dev
+   ```
+
+4. **Open** [http://localhost:3000](http://localhost:3000)
+
+## Environment Variables
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+OPENAI_API_KEY=your_openai_api_key
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Impact Model
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Every query costs ~£0.04 to process
+- 40% (£0.016) goes to environmental causes
+- £1 = 2.5 trees planted (based on Ecosia model)
+- Result: ~0.04 trees planted per query
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## MVP Timeline
 
-## Learn More
+- **Day 1**: Project setup ✅
+- **Day 2**: Chat interface + Auth + Impact tracking
+- **Day 3**: Dashboard + Polish + Testing
 
-To learn more about Next.js, take a look at the following resources:
+## Contributing
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This is an MVP built for rapid iteration. Current focus is on core functionality before adding complexity.
