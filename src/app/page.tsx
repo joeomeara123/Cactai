@@ -1,6 +1,26 @@
+import { redirect } from 'next/navigation'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { DatabaseClient } from '@/lib/database'
 import AuthButton from '@/components/auth/AuthButton'
 
-export default function Home() {
+export default async function Home() {
+  // Check if user is already authenticated
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // Redirect authenticated users to chat
+  if (user) {
+    // Make sure user profile exists
+    const db = new DatabaseClient(supabase as any)
+    await db.getOrCreateUserProfile({
+      id: user.id,
+      email: user.email!,
+      full_name: user.user_metadata?.full_name || user.user_metadata?.name,
+      avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture,
+    })
+    
+    redirect('/chat')
+  }
   return (
     <div className="font-sans min-h-screen flex flex-col">
       {/* Header */}
