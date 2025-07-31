@@ -69,9 +69,9 @@ export type GlobalStats = z.infer<typeof globalStatsSchema>
 export interface ChatSession {
   id: string
   user_id: string
-  messages: ChatMessage[]
-  created_at: Date
-  updated_at: Date
+  title: string
+  created_at: string
+  updated_at: string
 }
 
 export interface ApiError {

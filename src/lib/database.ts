@@ -7,7 +7,7 @@ import type { ModelName } from './config'
 export const getClientDb = () => createClientSupabaseClient()
 
 // Database client for server components  
-export const getServerDb = () => createServerSupabaseClient()
+export const getServerDb = async () => await createServerSupabaseClient()
 
 // Database operations
 export class DatabaseClient {

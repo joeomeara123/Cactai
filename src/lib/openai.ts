@@ -1,10 +1,10 @@
 import OpenAI from 'openai'
 import { encoding_for_model } from 'tiktoken'
-import { config, MODEL_CONFIG, type ModelName } from './config'
+import { serverConfig, MODEL_CONFIG, type ModelName } from './config-server'
 
 // Initialize OpenAI with validated config
 export const openai = new OpenAI({
-  apiKey: config.OPENAI_API_KEY,
+  apiKey: serverConfig.OPENAI_API_KEY,
 })
 
 // Custom error types
