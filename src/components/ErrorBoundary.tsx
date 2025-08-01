@@ -4,12 +4,12 @@ import React from 'react'
 
 interface ErrorBoundaryState {
   hasError: boolean
-  error?: Error
+  error?: Error | undefined
 }
 
 interface ErrorBoundaryProps {
   children: React.ReactNode
-  fallback?: React.ComponentType<{ error?: Error; reset: () => void }>
+  fallback?: React.ComponentType<{ error?: Error | undefined; reset: () => void }>
 }
 
 export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
@@ -41,7 +41,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 }
 
-function DefaultErrorFallback({ error, reset }: { error?: Error; reset: () => void }) {
+function DefaultErrorFallback({ error, reset }: { error?: Error | undefined; reset: () => void }) {
   return (
     <div className="min-h-screen bg-gray-900 flex items-center justify-center">
       <div className="text-center max-w-md mx-auto p-6">
