@@ -1,34 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { createChatCompletion, estimateTokenUsage, countStreamTokens } from '@/lib/openai'
-import { createDatabaseClient } from '@/lib/database'
 import type { ModelName } from '@/lib/config-server'
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, sessionId, model, userId } = await request.json()
+    const { message, model } = await request.json()
+    // TODO: Implement sessionId and userId for database tracking
+    // const { sessionId, userId } = await request.json()
 
     // Validate inputs
-    if (!message || !sessionId || !userId) {
+    if (!message || !model) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
       )
     }
-
-    // Get user auth
-    const supabase = await createServerSupabaseClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    if (authError || !user || user.id !== userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
-    // Create database client
-    const dbClient = createDatabaseClient(supabase)
 
     // Prepare messages for OpenAI
     const messages = [
@@ -66,24 +52,12 @@ export async function POST(request: NextRequest) {
     const actualInputTokens = estimatedInput // We'll use our estimate for now
     const actualOutputTokens = countStreamTokens(responseContent, model as ModelName)
 
-    // Record the query in database
-    const queryMetrics = await dbClient.recordQuery({
-      userId,
-      sessionId,
-      userMessage: message,
-      assistantMessage: responseContent,
-      inputTokens: actualInputTokens,
-      outputTokens: actualOutputTokens,
-      model: model as ModelName
-    })
-
-    if (!queryMetrics) {
-      console.error('Failed to record query metrics')
-    }
+    // Calculate mock trees added (simplified calculation)
+    const treesAdded = (actualInputTokens + actualOutputTokens) * 0.000001 // Mock calculation
 
     return NextResponse.json({
       response: responseContent,
-      treesAdded: queryMetrics?.trees_added || 0,
+      treesAdded: treesAdded,
       inputTokens: actualInputTokens,
       outputTokens: actualOutputTokens,
       model

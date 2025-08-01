@@ -1,63 +1,54 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useCallback, useMemo } from 'react'
+import Image from 'next/image'
 import { createClientSupabaseClient } from '@/lib/supabase-client'
-import type { User } from '@supabase/supabase-js'
+import { useAuth } from './AuthWrapper'
 
 export default function AuthButton() {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
-  const supabase = createClientSupabaseClient()
+  const { user, loading } = useAuth()
+  const [isSigningIn, setIsSigningIn] = useState(false)
+  
+  // Memoize the Supabase client
+  const supabase = useMemo(() => createClientSupabaseClient(), [])
 
-  useEffect(() => {
-    // Get initial session
-    const getInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      setUser(session?.user ?? null)
-      setLoading(false)
-    }
-
-    getInitialSession()
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setUser(session?.user ?? null)
-        setLoading(false)
+  const signInWithGoogle = useCallback(async () => {
+    setIsSigningIn(true)
+    try {
+      // Use the environment variable for redirect URL, fallback to current origin
+      const redirectUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${redirectUrl}/auth/callback`
+        }
+      })
+      
+      if (error) {
+        console.error('Error signing in:', error)
+        setIsSigningIn(false)
       }
-    )
-
-    return () => subscription.unsubscribe()
+    } catch (error) {
+      console.error('Unexpected error during sign in:', error)
+      setIsSigningIn(false)
+    }
   }, [supabase.auth])
 
-  const signInWithGoogle = async () => {
-    setLoading(true)
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`
+  const signOut = useCallback(async () => {
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        console.error('Error signing out:', error)
       }
-    })
-    
-    if (error) {
-      console.error('Error signing in:', error)
-      setLoading(false)
+    } catch (error) {
+      console.error('Unexpected error during sign out:', error)
     }
-  }
+  }, [supabase.auth])
 
-  const signOut = async () => {
-    setLoading(true)
-    const { error } = await supabase.auth.signOut()
-    if (error) {
-      console.error('Error signing out:', error)
-    }
-    setLoading(false)
-  }
-
-  if (loading) {
+  if (loading || isSigningIn) {
     return (
       <div className="flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-400"></div>
       </div>
     )
   }
@@ -67,19 +58,21 @@ export default function AuthButton() {
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           {user.user_metadata?.avatar_url && (
-            <img
+            <Image
               src={user.user_metadata.avatar_url}
               alt="Profile"
+              width={32}
+              height={32}
               className="w-8 h-8 rounded-full"
             />
           )}
-          <span className="text-sm text-gray-700">
+          <span className="text-sm text-white">
             {user.user_metadata?.full_name || user.email}
           </span>
         </div>
         <button
           onClick={signOut}
-          className="px-4 py-2 text-sm bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors"
+          className="px-4 py-2 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
         >
           Sign Out
         </button>

@@ -1,5 +1,6 @@
 import { createClientSupabaseClient } from './supabase-client'
 import { createServerSupabaseClient } from './supabase-server'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { calculateImpact, checkMilestone, type Milestone } from './impact'
 import type { User, QueryMetrics, UserImpact, GlobalStats, ChatSession } from '../types'
 import type { ModelName } from './config'
@@ -12,7 +13,7 @@ export const getServerDb = async () => await createServerSupabaseClient()
 
 // Database operations
 export class DatabaseClient {
-  constructor(private supabase: ReturnType<typeof createClientSupabaseClient>) {}
+  constructor(private supabase: SupabaseClient) {}
 
   // USER OPERATIONS
   async getUserProfile(userId: string): Promise<User | null> {
@@ -322,7 +323,7 @@ export class DatabaseClient {
 }
 
 // Export convenience functions
-export const createDatabaseClient = (supabase: ReturnType<typeof createClientSupabaseClient>) => 
+export const createDatabaseClient = (supabase: SupabaseClient) => 
   new DatabaseClient(supabase)
 
 // Default client-side database instance

@@ -1,32 +1,24 @@
-// Landing page with client-side authentication
-'use client'
-
-import AuthButton from '@/components/auth/AuthButton'
-import { useAuth } from '@/components/auth/AuthWrapper'
-import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
+// Temporarily disabled Supabase to test basic functionality
+// import { redirect } from 'next/navigation'
+// import { createServerSupabaseClient } from '@/lib/supabase-server'
+// import { DatabaseClient } from '@/lib/database'
+// import AuthButton from '@/components/auth/AuthButton'
 
 export default function Home() {
-  const { user, loading } = useAuth()
-  const router = useRouter()
+  // Temporarily disabled authentication check to test if this is the issue
+  // const supabase = await createServerSupabaseClient()
+  // const { data: { user } } = await supabase.auth.getUser()
 
-  useEffect(() => {
-    // If user is authenticated, redirect to chat
-    if (!loading && user) {
-      router.push('/chat')
-    }
-  }, [user, loading, router])
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-400 mx-auto mb-4"></div>
-          <p className="text-gray-400 text-sm">Loading...</p>
-        </div>
-      </div>
-    )
-  }
+  // if (user) {
+  //   const db = new DatabaseClient(supabase)
+  //   await db.getOrCreateUserProfile({
+  //     id: user.id,
+  //     email: user.email!,
+  //     full_name: user.user_metadata?.full_name || user.user_metadata?.name,
+  //     avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture,
+  //   })
+  //   redirect('/chat')
+  // }
   return (
     <div className="font-sans min-h-screen flex flex-col bg-gray-900 text-white">
       {/* Header */}
@@ -35,7 +27,10 @@ export default function Home() {
           <span className="text-2xl">🌵</span>
           <h1 className="text-xl font-bold text-green-400">CactAI</h1>
         </div>
-        <AuthButton />
+        {/* <AuthButton /> */}
+        <div className="px-4 py-2 bg-green-600 text-white rounded-lg">
+          Sign In (Disabled for Testing)
+        </div>
       </header>
 
       {/* Main Content */}

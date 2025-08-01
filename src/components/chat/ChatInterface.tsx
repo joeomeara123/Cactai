@@ -4,7 +4,8 @@ import { useState, useRef, useEffect } from 'react'
 import { createClientSupabaseClient } from '@/lib/supabase-client'
 import { createDatabaseClient } from '@/lib/database-client'
 import { MODEL_CONFIG, type ModelName } from '@/lib/config-client'
-import { Send, TreePine, Sparkles, ChevronDown, User, Bot } from 'lucide-react'
+import { Send, TreePine, Sparkles, ChevronDown, User, Bot, Copy, ThumbsUp, ThumbsDown, RotateCcw, Share } from 'lucide-react'
+import Sidebar from './Sidebar'
 
 interface Message {
   id: string
@@ -29,8 +30,6 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
   const [selectedModel, setSelectedModel] = useState<ModelName>('gpt-4o-mini')
   const [showModelDropdown, setShowModelDropdown] = useState(false)
   const [totalTrees, setTotalTrees] = useState(userProfile?.trees_planted || 0)
-  const [recentTreesAdded, setRecentTreesAdded] = useState(0)
-  const [showTreeAnimation, setShowTreeAnimation] = useState(false)
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const supabase = createClientSupabaseClient()
@@ -103,12 +102,9 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
       
       setMessages(prev => [...prev, assistantMsg])
       
-      // Update tree count with animation
+      // Update tree count
       if (data.treesAdded > 0) {
-        setRecentTreesAdded(data.treesAdded)
         setTotalTrees(prev => prev + data.treesAdded)
-        setShowTreeAnimation(true)
-        setTimeout(() => setShowTreeAnimation(false), 2000)
       }
 
     } catch (error) {
@@ -133,155 +129,196 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
     }
   }
 
+  const handleNewChat = () => {
+    setMessages([])
+    setCurrentSession(null)
+  }
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    window.location.href = '/'
+  }
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+  }
+
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      {/* Header with Tree Counter and Model Selector */}
-      <div className="flex justify-between items-center p-4 bg-white border-b shadow-sm">
-        <div className="flex items-center gap-4">
-          {/* Tree Counter */}
-          <div className="flex items-center gap-2 bg-green-50 px-4 py-2 rounded-full">
-            <TreePine className={`w-5 h-5 text-green-600 ${showTreeAnimation ? 'animate-bounce' : ''}`} />
-            <span className="font-semibold text-green-800">
-              {totalTrees.toFixed(4)} trees planted
-            </span>
-            {showTreeAnimation && (
-              <span className="text-green-600 animate-pulse">
-                +{recentTreesAdded.toFixed(4)}
-              </span>
-            )}
+    <div className="flex h-screen bg-gray-900">
+      {/* Sidebar */}
+      <Sidebar 
+        totalTrees={totalTrees}
+        onNewChat={handleNewChat}
+        onSignOut={handleSignOut}
+      />
+      
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col">
+        {/* Header */}
+        <div className="flex justify-between items-center p-4 bg-gray-800 border-b border-gray-700">
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-white">CactAI 4o</h2>
+            <ChevronDown className="w-4 h-4 text-gray-400" />
           </div>
           
-          {/* Progress to next whole tree */}
-          <div className="text-sm text-gray-600">
-            {(1 - (totalTrees % 1)).toFixed(4)} trees to next milestone
-          </div>
-        </div>
-
-        {/* Model Selector */}
-        <div className="relative">
-          <button
-            onClick={() => setShowModelDropdown(!showModelDropdown)}
-            className="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span className="text-sm font-medium">{selectedModel}</span>
-            <ChevronDown className="w-4 h-4" />
-          </button>
-          
-          {showModelDropdown && (
-            <div className="absolute right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 min-w-48">
-              {Object.entries(MODEL_CONFIG).map(([modelKey, config]) => (
-                <button
-                  key={modelKey}
-                  onClick={() => {
-                    setSelectedModel(modelKey as ModelName)
-                    setShowModelDropdown(false)
-                  }}
-                  className="w-full text-left px-4 py-2 hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg"
-                >
-                  <div className="font-medium">{modelKey}</div>
-                  <div className="text-xs text-gray-500">
-                    Input: ${config.inputCostPer1K}/1K • Output: ${config.outputCostPer1K}/1K
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.length === 0 && (
-          <div className="text-center py-12">
-            <TreePine className="w-12 h-12 text-green-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-700 mb-2">
-              Start Growing Your Forest! 🌱
-            </h3>
-            <p className="text-gray-500 max-w-md mx-auto">
-              Ask me anything and watch your tree counter grow. Every conversation helps reforest our planet!
-            </p>
-          </div>
-        )}
-
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            {message.role === 'assistant' && (
-              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <Bot className="w-4 h-4 text-green-600" />
-              </div>
-            )}
-            
-            <div
-              className={`max-w-2xl px-4 py-2 rounded-2xl ${
-                message.role === 'user'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-white border shadow-sm'
-              }`}
-            >
-              <div className="whitespace-pre-wrap">{message.content}</div>
-              {message.treesAdded && (
-                <div className="mt-2 text-xs text-green-600 flex items-center gap-1">
-                  <TreePine className="w-3 h-3" />
-                  +{message.treesAdded.toFixed(4)} trees planted
+          <div className="flex items-center gap-3">
+            {/* Model Selector */}
+            <div className="relative">
+              <button
+                onClick={() => setShowModelDropdown(!showModelDropdown)}
+                className="flex items-center gap-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors text-white"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span className="text-sm font-medium">{selectedModel}</span>
+                <ChevronDown className="w-4 h-4" />
+              </button>
+              
+              {showModelDropdown && (
+                <div className="absolute right-0 mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg z-10 min-w-48">
+                  {Object.entries(MODEL_CONFIG).map(([modelKey, config]) => (
+                    <button
+                      key={modelKey}
+                      onClick={() => {
+                        setSelectedModel(modelKey as ModelName)
+                        setShowModelDropdown(false)
+                      }}
+                      className="w-full text-left px-4 py-2 hover:bg-gray-700 first:rounded-t-lg last:rounded-b-lg text-white"
+                    >
+                      <div className="font-medium">{modelKey}</div>
+                      <div className="text-xs text-gray-400">
+                        Input: ${config.inputCostPer1K}/1K • Output: ${config.outputCostPer1K}/1K
+                      </div>
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
-
-            {message.role === 'user' && (
-              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <User className="w-4 h-4 text-blue-600" />
-              </div>
-            )}
-          </div>
-        ))}
-
-        {isLoading && (
-          <div className="flex gap-3 justify-start">
-            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-              <Bot className="w-4 h-4 text-green-600" />
-            </div>
-            <div className="bg-white border shadow-sm px-4 py-2 rounded-2xl">
-              <div className="flex gap-1">
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-              </div>
-            </div>
-          </div>
-        )}
-        
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input */}
-      <div className="border-t bg-white p-4">
-        <div className="flex gap-3 max-w-4xl mx-auto">
-          <div className="flex-1 relative">
-            <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Ask me anything... 🌱"
-              className="w-full p-3 pr-12 border rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              rows={1}
-              style={{ minHeight: '44px', maxHeight: '120px' }}
-            />
-            <button
-              onClick={handleSend}
-              disabled={!input.trim() || isLoading}
-              className="absolute right-2 top-2 p-2 text-green-600 hover:text-green-700 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
-            >
-              <Send className="w-5 h-5" />
+            
+            <button className="p-2 text-gray-400 hover:text-white transition-colors">
+              <Share className="w-4 h-4" />
             </button>
           </div>
         </div>
-        
-        <div className="text-center mt-2 text-xs text-gray-500">
-          Press Enter to send • Shift+Enter for new line
+
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-3xl mx-auto px-4">
+            {messages.length === 0 && (
+              <div className="text-center py-32">
+                <div className="mb-8">
+                  <TreePine className="w-16 h-16 text-green-400 mx-auto mb-4" />
+                  <h3 className="text-2xl font-semibold text-white mb-2">
+                    What can I help with?
+                  </h3>
+                  <p className="text-gray-400 max-w-md mx-auto">
+                    Ask me anything and watch your tree counter grow. Every conversation helps reforest our planet! 🌱
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-6 py-4">
+              {messages.map((message) => (
+                <div key={message.id} className="group">
+                  {message.role === 'user' ? (
+                    <div className="flex gap-4 justify-end">
+                      <div className="max-w-2xl">
+                        <div className="bg-gray-700 text-white rounded-3xl px-4 py-3">
+                          <div className="whitespace-pre-wrap">{message.content}</div>
+                        </div>
+                      </div>
+                      <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                        <User className="w-4 h-4 text-white" />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex gap-4">
+                      <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
+                        <Bot className="w-4 h-4 text-white" />
+                      </div>
+                      <div className="flex-1 max-w-2xl">
+                        <div className="text-white mb-2">
+                          <div className="whitespace-pre-wrap">{message.content}</div>
+                          {message.treesAdded && (
+                            <div className="mt-3 px-3 py-2 bg-green-900/30 rounded-lg border border-green-700">
+                              <div className="text-sm text-green-400 flex items-center gap-2">
+                                <TreePine className="w-4 h-4" />
+                                <span>+{message.treesAdded.toFixed(4)} trees planted from this query!</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button 
+                            onClick={() => copyToClipboard(message.content)}
+                            className="p-1 text-gray-400 hover:text-white transition-colors"
+                            title="Copy"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </button>
+                          <button className="p-1 text-gray-400 hover:text-white transition-colors" title="Good response">
+                            <ThumbsUp className="w-4 h-4" />
+                          </button>
+                          <button className="p-1 text-gray-400 hover:text-white transition-colors" title="Bad response">
+                            <ThumbsDown className="w-4 h-4" />
+                          </button>
+                          <button className="p-1 text-gray-400 hover:text-white transition-colors" title="Regenerate">
+                            <RotateCcw className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {isLoading && (
+                <div className="flex gap-4">
+                  <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Bot className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="text-white">
+                    <div className="flex gap-1">
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div ref={messagesEndRef} />
+          </div>
+      </div>
+
+        {/* Input */}
+        <div className="border-t border-gray-700 bg-gray-900 p-4">
+          <div className="max-w-3xl mx-auto">
+            <div className="relative bg-gray-800 rounded-3xl border border-gray-600">
+              <textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Message CactAI..."
+                className="w-full p-4 pr-12 bg-transparent text-white placeholder-gray-400 resize-none focus:outline-none"
+                rows={1}
+                style={{ minHeight: '52px', maxHeight: '120px' }}
+              />
+              <button
+                onClick={handleSend}
+                disabled={!input.trim() || isLoading}
+                className="absolute right-3 bottom-3 p-2 bg-white text-black rounded-full hover:bg-gray-200 disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="text-center mt-3 text-xs text-gray-500">
+              CactAI can make mistakes. Check important info. See{' '}
+              <button className="underline hover:text-gray-400">Cookie Preferences</button>.
+            </div>
+          </div>
         </div>
       </div>
     </div>
