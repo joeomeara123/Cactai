@@ -25,28 +25,40 @@ interface AuthWrapperProps {
 
 export default function AuthWrapper({ children }: AuthWrapperProps) {
   const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false) // Start with false to prevent blocking
   
   // Memoize the Supabase client to prevent unnecessary re-renders
   const supabase = useMemo(() => createClientSupabaseClient(), [])
 
-  // Get initial session function
-  const getInitialSession = useCallback(async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      setUser(session?.user ?? null)
-      setLoading(false)
-    } catch (error) {
-      console.error('Error getting session:', error)
-      setLoading(false)
-    }
-  }, [supabase.auth])
-
   useEffect(() => {
     let mounted = true
 
-    getInitialSession()
+    // Initialize auth asynchronously without blocking UI
+    const initAuth = async () => {
+      try {
+        console.log('Initializing auth asynchronously...')
+        
+        // Try to get session (non-blocking)
+        const { data: { session }, error } = await supabase.auth.getSession()
+        
+        if (mounted) {
+          if (error) {
+            console.error('Auth session error:', error)
+          } else {
+            console.log('Auth initialized:', session ? 'User authenticated' : 'No session')
+          }
+          setUser(session?.user ?? null)
+        }
+        
+      } catch (error) {
+        console.error('Auth initialization error:', error)
+        if (mounted) {
+          setUser(null)
+        }
+      }
+    }
+
+    initAuth()
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -55,38 +67,17 @@ export default function AuthWrapper({ children }: AuthWrapperProps) {
         
         console.log('Auth state changed:', event, session?.user?.email)
         setUser(session?.user ?? null)
-        setLoading(false)
       }
     )
-
-    // Failsafe: Reset loading state after 5 seconds
-    const failsafe = setTimeout(() => {
-      if (mounted) {
-        console.warn('Auth loading timeout - forcing loading to false')
-        setLoading(false)
-      }
-    }, 5000)
 
     return () => {
       mounted = false
       subscription.unsubscribe()
-      clearTimeout(failsafe)
     }
-  }, [supabase.auth, getInitialSession])
+  }, [supabase.auth])
 
   // Memoize the context value to prevent unnecessary re-renders
   const contextValue = useMemo(() => ({ user, loading }), [user, loading])
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-400 mx-auto mb-4"></div>
-          <p className="text-gray-400 text-sm">Loading...</p>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <AuthContext.Provider value={contextValue}>

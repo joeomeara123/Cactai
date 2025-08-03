@@ -43,10 +43,26 @@ export default function Sidebar({ totalTrees, onNewChat, onSignOut }: SidebarPro
             <span className="text-green-400 font-semibold">Trees Planted</span>
           </div>
           <div className="text-2xl font-bold text-white">
-            {totalTrees.toFixed(4)}
+            {totalTrees >= 1 
+              ? totalTrees.toFixed(2)
+              : totalTrees >= 0.1
+              ? totalTrees.toFixed(3)
+              : totalTrees >= 0.001
+              ? totalTrees.toFixed(4)
+              : totalTrees > 0
+              ? `${(totalTrees * 1000).toFixed(1)} milli`
+              : '0'
+            }
           </div>
           <div className="text-sm text-gray-400">
-            Growing your impact 🌱
+            {totalTrees >= 1 
+              ? 'Trees planted! 🌳'
+              : totalTrees >= 0.001
+              ? 'Growing your forest 🌱'
+              : totalTrees > 0
+              ? 'Every chat helps! 🌱'
+              : 'Start chatting to plant trees 🌱'
+            }
           </div>
         </div>
       </div>

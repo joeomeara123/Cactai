@@ -250,11 +250,18 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
                       <div className="flex-1 max-w-2xl">
                         <div className="text-white mb-2">
                           <div className="whitespace-pre-wrap">{message.content}</div>
-                          {message.treesAdded && (
+                          {message.treesAdded && message.treesAdded > 0 && (
                             <div className="mt-3 px-3 py-2 bg-green-900/30 rounded-lg border border-green-700">
                               <div className="text-sm text-green-400 flex items-center gap-2">
                                 <TreePine className="w-4 h-4" />
-                                <span>+{message.treesAdded.toFixed(4)} trees planted from this query!</span>
+                                <span>
+                                  {message.treesAdded >= 0.001 
+                                    ? `+${message.treesAdded.toFixed(4)} trees planted!`
+                                    : message.treesAdded > 0
+                                    ? `+${(message.treesAdded * 1000).toFixed(1)} milli-trees planted!`
+                                    : '+Impact recorded!'
+                                  } 🌱
+                                </span>
                               </div>
                             </div>
                           )}
