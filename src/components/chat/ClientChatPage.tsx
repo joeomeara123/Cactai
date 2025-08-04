@@ -3,7 +3,7 @@
 import { useAuth } from '@/components/auth/AuthWrapper'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
-import ChatInterface from './ChatInterface'
+import ChatInterface from './ChatInterfaceNew'
 
 export default function ClientChatPage() {
   const { user, loading } = useAuth()

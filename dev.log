@@ -66,3 +66,29 @@
  ✓ Compiled in 393ms (796 modules)
  ✓ Compiled in 381ms (796 modules)
  ✓ Compiled in 305ms (796 modules)
+ ⨯ ./src/components/chat/ChatInterface.tsx
+Error: Failed to read source code from /Users/joeom/Desktop/cactai/src/components/chat/ChatInterface.tsx
+
+Caused by:
+    No such file or directory (os error 2)
+
+Import trace for requested module:
+./src/components/chat/ChatInterface.tsx
+./src/components/chat/ClientChatPage.tsx
+ ⨯ ./src/components/chat/ChatInterface.tsx
+Error: Failed to read source code from /Users/joeom/Desktop/cactai/src/components/chat/ChatInterface.tsx
+
+Caused by:
+    No such file or directory (os error 2)
+
+Import trace for requested module:
+./src/components/chat/ChatInterface.tsx
+./src/components/chat/ClientChatPage.tsx
+ ✓ Compiled in 265ms (796 modules)
+ ✓ Compiled /api/admin/create-profile in 174ms (529 modules)
+🔧 Profile creation endpoint called
+🔧 Missing Supabase configuration
+🔧 Profile creation endpoint called
+🔧 Missing Supabase configuration
+ POST /api/admin/create-profile 500 in 251ms
+ POST /api/admin/create-profile 500 in 255ms
