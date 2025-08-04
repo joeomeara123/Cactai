@@ -79,9 +79,18 @@ export class DatabaseClient {
     try {
       console.log('🔧 Ensuring user profile exists for:', userId)
       
+      // Get current session for auth token
+      const { data: { session }, error: sessionError } = await this.supabase.auth.getSession()
+      
+      if (sessionError || !session) {
+        console.error('🔧 No valid session for profile creation:', sessionError)
+        throw new Error('No valid session for profile creation')
+      }
+
       const response = await fetch('/api/admin/create-profile', {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ userId })
@@ -90,12 +99,28 @@ export class DatabaseClient {
       if (response.ok) {
         const result = await response.json()
         console.log('🔧 Profile creation result:', result)
+        
+        if (!result.success) {
+          console.error('🔧 Profile creation failed:', result.error)
+          throw new Error(`Profile creation failed: ${result.error}`)
+        }
       } else {
         const errorText = await response.text()
         console.error('🔧 Profile creation endpoint failed:', response.status, errorText)
+        
+        let errorDetails = errorText
+        try {
+          const errorData = JSON.parse(errorText)
+          errorDetails = `${errorData.error}${errorData.details ? ': ' + errorData.details : ''}`
+        } catch (e) {
+          // Keep original error text
+        }
+        
+        throw new Error(`Profile creation endpoint failed (${response.status}): ${errorDetails}`)
       }
     } catch (error) {
       console.error('🔧 Error ensuring profile exists:', error)
+      throw error // Re-throw so createChatSession can handle it
     }
   }
 
