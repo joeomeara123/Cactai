@@ -38,7 +38,10 @@ export class DatabaseClient {
   // CHAT SESSION OPERATIONS
   async createChatSession(userId: string, title?: string): Promise<string | null> {
     try {
-      console.log('Creating chat session for user:', userId)
+      console.log('🔧 Creating chat session for user:', userId)
+      
+      // First, ensure user profile exists using service role
+      await this.ensureUserProfileExists(userId)
       
       // Create the chat session
       const { data, error } = await this.supabase
@@ -51,7 +54,7 @@ export class DatabaseClient {
         .single()
 
       if (error) {
-        console.error('Error creating chat session:', {
+        console.error('🔧 Error creating chat session:', {
           error,
           userId,
           title,
@@ -63,11 +66,36 @@ export class DatabaseClient {
         return null
       }
 
-      console.log('Chat session created successfully:', data.id)
+      console.log('🔧 Chat session created successfully:', data.id)
       return data.id
     } catch (error) {
-      console.error('Unexpected error in createChatSession:', error)
+      console.error('🔧 Unexpected error in createChatSession:', error)
       return null
+    }
+  }
+
+  // Ensure user profile exists by calling our admin endpoint
+  private async ensureUserProfileExists(userId: string): Promise<void> {
+    try {
+      console.log('🔧 Ensuring user profile exists for:', userId)
+      
+      const response = await fetch('/api/admin/create-profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ userId })
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        console.log('🔧 Profile creation result:', result)
+      } else {
+        const errorText = await response.text()
+        console.error('🔧 Profile creation endpoint failed:', response.status, errorText)
+      }
+    } catch (error) {
+      console.error('🔧 Error ensuring profile exists:', error)
     }
   }
 

@@ -76,28 +76,43 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
 
   // Create new session on first message
   const ensureSession = async () => {
+    console.log('🔧 ensureSession called, currentSession:', currentSession)
+    
     if (!currentSession) {
+      console.log('🔧 No existing session, creating new one...')
+      
       // First, ensure user profile exists
+      console.log('🔧 Calling ensureUserProfile...')
       const profileExists = await ensureUserProfile()
+      console.log('🔧 ensureUserProfile result:', profileExists)
+      
       if (!profileExists) {
+        console.error('🔧 Profile creation failed, throwing error')
         throw new Error('Cannot create session: User profile creation failed')
       }
       
+      console.log('🔧 Profile exists, creating chat session...')
       const sessionId = await db.createChatSession(userId, 'New Chat')
+      console.log('🔧 createChatSession result:', sessionId)
+      
       if (sessionId) {
         setCurrentSession(sessionId)
+        console.log('🔧 Session created successfully:', sessionId)
         return sessionId
       } else {
+        console.error('🔧 Session creation returned null')
         throw new Error('Failed to create chat session in database')
       }
     }
+    
+    console.log('🔧 Using existing session:', currentSession)
     return currentSession
   }
 
   // Ensure user profile exists using server-side admin endpoint
   const ensureUserProfile = async () => {
     try {
-      console.log('Ensuring user profile exists via admin endpoint...')
+      console.log('🔧 ensureUserProfile: Starting profile creation process...')
 
       // Get the session first
       const { data: { session }, error: sessionError } = await supabase.auth.getSession()

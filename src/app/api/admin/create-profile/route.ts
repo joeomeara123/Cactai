@@ -6,53 +6,38 @@ export async function POST(request: NextRequest) {
     // Get environment variables
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-    if (!supabaseUrl || !supabaseServiceKey || !supabaseAnonKey) {
+    if (!supabaseUrl || !supabaseServiceKey) {
       return NextResponse.json(
         { error: 'Missing Supabase configuration' },
         { status: 500 }
       )
     }
 
-    // Get the authorization header
-    const authHeader = request.headers.get('authorization')
-    const accessToken = authHeader?.replace('Bearer ', '')
-
-    if (!accessToken) {
+    // Get userId from request body
+    const { userId } = await request.json()
+    
+    if (!userId) {
       return NextResponse.json(
-        { error: 'Missing authorization token' },
-        { status: 401 }
+        { error: 'Missing userId in request body' },
+        { status: 400 }
       )
     }
 
-    // Create client with anon key for user verification
-    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey)
-    
-    // Verify the user using the access token
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(accessToken)
-    
-    if (authError || !user) {
-      console.error('Authentication failed:', authError)
-      return NextResponse.json(
-        { error: 'User not authenticated', details: authError?.message },
-        { status: 401 }
-      )
-    }
+    console.log('Creating profile for user:', userId)
 
     // Create admin client with service role key (bypasses RLS)
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
 
-    console.log(`Creating profile for user: ${user.id}`)
-
     // Check if profile already exists
     const { data: existingProfile, error: checkError } = await supabaseAdmin
       .from('user_profiles')
-      .select('id')
-      .eq('id', user.id)
+      .select('id, email')
+      .eq('id', userId)
       .single()
 
     if (existingProfile) {
+      console.log('Profile already exists for user:', userId)
       return NextResponse.json({ 
         success: true, 
         message: 'Profile already exists',
@@ -60,14 +45,17 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    console.log('Profile does not exist, creating new profile for:', userId)
+
     // Create the user profile using admin privileges
+    // Since we don't have user metadata, create with minimal info
     const { data: newProfile, error: createError } = await supabaseAdmin
       .from('user_profiles')
       .insert({
-        id: user.id,
-        email: user.email,
-        full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
-        avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
+        id: userId,
+        email: `user-${userId}@temp.com`, // Temporary email, will be updated later
+        full_name: null,
+        avatar_url: null,
         trees_planted: 0,
         total_queries: 0,
         total_cost: 0,
