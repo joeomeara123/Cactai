@@ -202,25 +202,16 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
       const sessionId = await ensureSession()
       if (!sessionId) throw new Error('Failed to create session')
 
-      // Call API route for OpenAI completion (temporarily using simple-chat for testing)
-      const response = await fetch('/api/simple-chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: userMessage,
-          sessionId,
-          model: selectedModel,
-          userId
-        })
-      })
+      // Use Server Action instead of API route (bypasses 405 errors)
+      const { processChatMessage } = await import('@/app/actions/chat')
+      const result = await processChatMessage(userMessage)
 
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error(`API Error ${response.status}:`, errorText)
-        throw new Error(`Chat API error: ${response.status} - ${errorText}`)
+      if (!result.success) {
+        console.error('Server Action Error:', result.error)
+        throw new Error(`Server Action error: ${result.error}`)
       }
 
-      const data = await response.json()
+      const data = result.data
       console.log('API Response data:', data) // Debug log
       
       // Add assistant message
