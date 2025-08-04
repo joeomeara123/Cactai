@@ -69,9 +69,17 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
     refreshTreeCount()
   }, [refreshTreeCount])
 
+  // Ensure user profile exists on component mount
+  useEffect(() => {
+    ensureUserProfile()
+  }, [userId])
+
   // Create new session on first message
   const ensureSession = async () => {
     if (!currentSession) {
+      // First, ensure user profile exists
+      await ensureUserProfile()
+      
       const sessionId = await db.createChatSession(userId, 'New Chat')
       if (sessionId) {
         setCurrentSession(sessionId)
@@ -79,6 +87,46 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
       }
     }
     return currentSession
+  }
+
+  // Ensure user profile exists in database
+  const ensureUserProfile = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      // Check if profile exists
+      const { data: profile, error } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single()
+
+      // If profile doesn't exist, create it
+      if (error && error.code === 'PGRST116') {
+        console.log('Creating missing user profile...')
+        const { error: insertError } = await supabase
+          .from('user_profiles')
+          .insert({
+            id: user.id,
+            email: user.email,
+            full_name: user.user_metadata?.full_name || null,
+            avatar_url: user.user_metadata?.avatar_url || null,
+            trees_planted: 0,
+            total_queries: 0,
+            total_cost: 0,
+            total_donated: 0
+          })
+
+        if (insertError) {
+          console.error('Failed to create user profile:', insertError)
+        } else {
+          console.log('User profile created successfully')
+        }
+      }
+    } catch (error) {
+      console.error('Error ensuring user profile:', error)
+    }
   }
 
   const handleSend = async () => {
