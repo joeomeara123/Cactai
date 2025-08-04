@@ -78,12 +78,17 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
   const ensureSession = async () => {
     if (!currentSession) {
       // First, ensure user profile exists
-      await ensureUserProfile()
+      const profileExists = await ensureUserProfile()
+      if (!profileExists) {
+        throw new Error('Cannot create session: User profile creation failed')
+      }
       
       const sessionId = await db.createChatSession(userId, 'New Chat')
       if (sessionId) {
         setCurrentSession(sessionId)
         return sessionId
+      } else {
+        throw new Error('Failed to create chat session in database')
       }
     }
     return currentSession
@@ -92,8 +97,13 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
   // Ensure user profile exists in database
   const ensureUserProfile = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      if (userError || !user) {
+        console.error('Cannot get authenticated user:', userError)
+        return false
+      }
+
+      console.log('Checking user profile for:', user.id)
 
       // Check if profile exists
       const { data: profile, error } = await supabase
@@ -102,30 +112,51 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
         .eq('id', user.id)
         .single()
 
+      if (profile) {
+        console.log('User profile exists')
+        return true
+      }
+
       // If profile doesn't exist, create it
       if (error && error.code === 'PGRST116') {
-        console.log('Creating missing user profile...')
-        const { error: insertError } = await supabase
+        console.log('Creating missing user profile for:', user.id)
+        console.log('User metadata:', user.user_metadata)
+        
+        const { data: newProfile, error: insertError } = await supabase
           .from('user_profiles')
           .insert({
             id: user.id,
             email: user.email,
-            full_name: user.user_metadata?.full_name || null,
-            avatar_url: user.user_metadata?.avatar_url || null,
+            full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
+            avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
             trees_planted: 0,
             total_queries: 0,
             total_cost: 0,
             total_donated: 0
           })
+          .select()
+          .single()
 
         if (insertError) {
-          console.error('Failed to create user profile:', insertError)
+          console.error('Failed to create user profile:', {
+            error: insertError,
+            code: insertError.code,
+            message: insertError.message,
+            details: insertError.details,
+            hint: insertError.hint
+          })
+          return false
         } else {
-          console.log('User profile created successfully')
+          console.log('User profile created successfully:', newProfile)
+          return true
         }
+      } else {
+        console.error('Unexpected error checking user profile:', error)
+        return false
       }
     } catch (error) {
       console.error('Error ensuring user profile:', error)
+      return false
     }
   }
 
