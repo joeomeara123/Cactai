@@ -92,3 +92,6 @@ Import trace for requested module:
 🔧 Missing Supabase configuration
  POST /api/admin/create-profile 500 in 251ms
  POST /api/admin/create-profile 500 in 255ms
+ ✓ Compiled in 172ms (376 modules)
+ ✓ Compiled in 148ms (782 modules)
+ ✓ Compiled in 452ms (914 modules)
