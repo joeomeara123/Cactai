@@ -202,9 +202,11 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
       const sessionId = await ensureSession()
       if (!sessionId) throw new Error('Failed to create session')
 
-      // Use Server Action instead of API route (bypasses 405 errors)
+      // FORCE CACHE INVALIDATION: Use Server Action instead of API route (bypasses 405 errors)
+      console.log('🔧 Using Server Action instead of API route')
       const { processChatMessage } = await import('@/app/actions/chat')
       const result = await processChatMessage(userMessage)
+      console.log('🔧 Server Action result:', result)
 
       if (!result.success) {
         console.error('Server Action Error:', result.error)
