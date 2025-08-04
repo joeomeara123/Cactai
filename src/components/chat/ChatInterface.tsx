@@ -202,8 +202,8 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
       const sessionId = await ensureSession()
       if (!sessionId) throw new Error('Failed to create session')
 
-      // Call API route for OpenAI completion
-      const response = await fetch('/api/chat', {
+      // Call API route for OpenAI completion (temporarily using simple-chat for testing)
+      const response = await fetch('/api/simple-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
