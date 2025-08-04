@@ -20,3 +20,42 @@
  ✓ Compiled in 188ms (326 modules)
  ✓ Compiled in 175ms (326 modules)
  ✓ Compiled in 60ms (326 modules)
+ ✓ Compiled / in 372ms (721 modules)
+ GET /?code=2ff45da4-a5a4-4500-a18c-0653a1db0fc8 200 in 488ms
+ ⚠ The "images.domains" configuration is deprecated. Please use "images.remotePatterns" configuration instead.
+ ✓ Compiled /chat in 174ms (780 modules)
+ ✓ Compiled /api/admin/create-profile in 199ms (529 modules)
+🔧 Profile creation endpoint called
+🔧 Missing Supabase configuration
+🔧 Profile creation endpoint called
+🔧 Missing Supabase configuration
+ POST /api/admin/create-profile 500 in 280ms
+ POST /api/admin/create-profile 500 in 280ms
+🔧 Profile creation endpoint called
+🔧 Missing Supabase configuration
+ POST /api/admin/create-profile 500 in 23ms
+🔧 Profile creation endpoint called
+🔧 Missing Supabase configuration
+ POST /api/admin/create-profile 500 in 10ms
+ ✓ Compiled /_not-found in 82ms (892 modules)
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 150ms
+ GET /chat 200 in 61ms
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 35ms
+ ✓ Compiled /favicon.ico in 117ms (558 modules)
+🔧 Profile creation endpoint called
+🔧 Missing Supabase configuration
+🔧 Profile creation endpoint called
+🔧 Missing Supabase configuration
+ POST /api/admin/create-profile 500 in 219ms
+ POST /api/admin/create-profile 500 in 220ms
+ GET /favicon.ico 200 in 244ms
+🔧 Profile creation endpoint called
+🔧 Missing Supabase configuration
+ POST /api/admin/create-profile 500 in 9ms
+🔧 Profile creation endpoint called
+🔧 Missing Supabase configuration
+ POST /api/admin/create-profile 500 in 10ms
+🔧 Profile creation endpoint called
+🔧 Missing Supabase configuration
+ POST /api/admin/create-profile 500 in 25ms
+ ✓ Compiled in 368ms (934 modules)
