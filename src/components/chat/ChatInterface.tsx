@@ -99,18 +99,42 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
     try {
       console.log('Ensuring user profile exists via admin endpoint...')
 
+      // Get the session first
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      
+      if (sessionError || !session) {
+        console.error('No valid session for profile creation:', sessionError)
+        return false
+      }
+
+      console.log('Using access token for profile creation:', session.access_token?.substring(0, 20) + '...')
+
       // Call the admin endpoint to create/verify profile
       const response = await fetch('/api/admin/create-profile', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json'
         }
       })
 
+      console.log('Profile creation endpoint response status:', response.status)
+
       if (!response.ok) {
-        const errorData = await response.json()
-        console.error('Profile creation endpoint failed:', errorData)
+        const errorText = await response.text()
+        console.error('Profile creation endpoint failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText
+        })
+        
+        try {
+          const errorData = JSON.parse(errorText)
+          console.error('Parsed error data:', errorData)
+        } catch (e) {
+          console.error('Could not parse error response as JSON')
+        }
+        
         return false
       }
 
