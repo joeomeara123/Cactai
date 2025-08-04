@@ -37,21 +37,71 @@ export class DatabaseClient {
 
   // CHAT SESSION OPERATIONS
   async createChatSession(userId: string, title?: string): Promise<string | null> {
-    const { data, error } = await this.supabase
-      .from('chat_sessions')
-      .insert({
-        user_id: userId,
-        title: title || 'New Chat'
-      })
-      .select('id')
-      .single()
+    try {
+      // First check if user profile exists
+      const { data: userExists, error: userCheckError } = await this.supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('id', userId)
+        .single()
 
-    if (error) {
-      console.error('Error creating chat session:', error)
+      if (userCheckError || !userExists) {
+        console.warn('User profile not found, attempting to create:', userId)
+        
+        // Try to get user info from auth and create profile
+        const { data: { user }, error: authError } = await this.supabase.auth.getUser()
+        
+        if (authError || !user || user.id !== userId) {
+          console.error('Cannot create profile - user not authenticated or ID mismatch:', { authError, userId, authUserId: user?.id })
+          return null
+        }
+
+        // Create user profile
+        const { error: profileError } = await this.supabase
+          .from('user_profiles')
+          .insert({
+            id: user.id,
+            email: user.email,
+            full_name: user.user_metadata?.full_name || null,
+            avatar_url: user.user_metadata?.avatar_url || null
+          })
+
+        if (profileError) {
+          console.error('Failed to create user profile:', profileError)
+          return null
+        }
+
+        console.log('User profile created successfully for:', userId)
+      }
+
+      // Create the chat session
+      const { data, error } = await this.supabase
+        .from('chat_sessions')
+        .insert({
+          user_id: userId,
+          title: title || 'New Chat'
+        })
+        .select('id')
+        .single()
+
+      if (error) {
+        console.error('Error creating chat session:', {
+          error,
+          userId,
+          title,
+          code: error.code,
+          message: error.message,
+          details: error.details
+        })
+        return null
+      }
+
+      console.log('Chat session created successfully:', data.id)
+      return data.id
+    } catch (error) {
+      console.error('Unexpected error in createChatSession:', error)
       return null
     }
-
-    return data.id
   }
 
   async getChatSessions(userId: string): Promise<ChatSession[]> {
