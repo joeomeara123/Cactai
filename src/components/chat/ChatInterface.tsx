@@ -94,68 +94,38 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
     return currentSession
   }
 
-  // Ensure user profile exists in database
+  // Ensure user profile exists using server-side admin endpoint
   const ensureUserProfile = async () => {
     try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser()
-      if (userError || !user) {
-        console.error('Cannot get authenticated user:', userError)
+      console.log('Ensuring user profile exists via admin endpoint...')
+
+      // Call the admin endpoint to create/verify profile
+      const response = await fetch('/api/admin/create-profile', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error('Profile creation endpoint failed:', errorData)
         return false
       }
 
-      console.log('Checking user profile for:', user.id)
+      const result = await response.json()
+      console.log('Profile creation result:', result)
 
-      // Check if profile exists
-      const { data: profile, error } = await supabase
-        .from('user_profiles')
-        .select('id')
-        .eq('id', user.id)
-        .single()
-
-      if (profile) {
-        console.log('User profile exists')
+      if (result.success) {
+        console.log('User profile ensured successfully')
         return true
-      }
-
-      // If profile doesn't exist, create it
-      if (error && error.code === 'PGRST116') {
-        console.log('Creating missing user profile for:', user.id)
-        console.log('User metadata:', user.user_metadata)
-        
-        const { data: newProfile, error: insertError } = await supabase
-          .from('user_profiles')
-          .insert({
-            id: user.id,
-            email: user.email,
-            full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
-            avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
-            trees_planted: 0,
-            total_queries: 0,
-            total_cost: 0,
-            total_donated: 0
-          })
-          .select()
-          .single()
-
-        if (insertError) {
-          console.error('Failed to create user profile:', {
-            error: insertError,
-            code: insertError.code,
-            message: insertError.message,
-            details: insertError.details,
-            hint: insertError.hint
-          })
-          return false
-        } else {
-          console.log('User profile created successfully:', newProfile)
-          return true
-        }
       } else {
-        console.error('Unexpected error checking user profile:', error)
+        console.error('Profile creation failed:', result.error)
         return false
       }
     } catch (error) {
-      console.error('Error ensuring user profile:', error)
+      console.error('Error calling profile creation endpoint:', error)
       return false
     }
   }
