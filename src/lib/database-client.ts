@@ -40,10 +40,8 @@ export class DatabaseClient {
     try {
       console.log('🔧 Creating chat session for user:', userId)
       
-      // First, ensure user profile exists using service role
-      await this.ensureUserProfileExists(userId)
-      
-      // Create the chat session
+      // Database trigger should automatically create user profiles
+      // If this fails with constraint violation, the trigger isn't working
       const { data, error } = await this.supabase
         .from('chat_sessions')
         .insert({
@@ -63,6 +61,13 @@ export class DatabaseClient {
           details: error.details,
           hint: error.hint
         })
+        
+        // If constraint violation, the database trigger isn't working
+        if (error.code === '23503') {
+          console.error('🔧 CRITICAL: User profile missing - database trigger not working!')
+          console.error('🔧 Please run the auto-profile-trigger.sql in Supabase SQL Editor')
+        }
+        
         return null
       }
 
@@ -71,56 +76,6 @@ export class DatabaseClient {
     } catch (error) {
       console.error('🔧 Unexpected error in createChatSession:', error)
       return null
-    }
-  }
-
-  // Ensure user profile exists by calling our admin endpoint
-  private async ensureUserProfileExists(userId: string): Promise<void> {
-    try {
-      console.log('🔧 Ensuring user profile exists for:', userId)
-      
-      // Get current session for auth token
-      const { data: { session }, error: sessionError } = await this.supabase.auth.getSession()
-      
-      if (sessionError || !session) {
-        console.error('🔧 No valid session for profile creation:', sessionError)
-        throw new Error('No valid session for profile creation')
-      }
-
-      const response = await fetch('/api/admin/create-profile', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ userId })
-      })
-
-      if (response.ok) {
-        const result = await response.json()
-        console.log('🔧 Profile creation result:', result)
-        
-        if (!result.success) {
-          console.error('🔧 Profile creation failed:', result.error)
-          throw new Error(`Profile creation failed: ${result.error}`)
-        }
-      } else {
-        const errorText = await response.text()
-        console.error('🔧 Profile creation endpoint failed:', response.status, errorText)
-        
-        let errorDetails = errorText
-        try {
-          const errorData = JSON.parse(errorText)
-          errorDetails = `${errorData.error}${errorData.details ? ': ' + errorData.details : ''}`
-        } catch (e) {
-          // Keep original error text
-        }
-        
-        throw new Error(`Profile creation endpoint failed (${response.status}): ${errorDetails}`)
-      }
-    } catch (error) {
-      console.error('🔧 Error ensuring profile exists:', error)
-      throw error // Re-throw so createChatSession can handle it
     }
   }
 
