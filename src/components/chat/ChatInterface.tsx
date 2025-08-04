@@ -84,6 +84,19 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
   const handleSend = async () => {
     if (!input.trim() || isLoading) return
 
+    // Check if user is authenticated
+    if (!userId) {
+      console.error('User not authenticated')
+      const errorMsg: Message = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: 'Please sign in to start chatting.',
+        timestamp: new Date()
+      }
+      setMessages(prev => [...prev, errorMsg])
+      return
+    }
+
     const userMessage = input.trim()
     setInput('')
     setIsLoading(true)
@@ -113,7 +126,11 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
         })
       })
 
-      if (!response.ok) throw new Error('Chat API error')
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error(`API Error ${response.status}:`, errorText)
+        throw new Error(`Chat API error: ${response.status} - ${errorText}`)
+      }
 
       const data = await response.json()
       console.log('API Response data:', data) // Debug log
@@ -146,11 +163,26 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
 
     } catch (error) {
       console.error('Chat error:', error)
+      
+      // Determine more specific error message
+      let errorMessage = 'Sorry, something went wrong. Please try again.'
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Chat API error')) {
+          errorMessage = 'Unable to connect to AI service. Please check your connection and try again.'
+        } else if (error.message.includes('fetch')) {
+          errorMessage = 'Network error. Please check your internet connection.'
+        } else if (error.message.includes('Authentication')) {
+          errorMessage = 'Authentication error. Please try signing in again.'
+        }
+        console.error('Detailed error:', error.message)
+      }
+      
       // Add error message
       const errorMsg: Message = {
         id: crypto.randomUUID(),
         role: 'assistant',
-        content: 'Sorry, something went wrong. Please try again.',
+        content: errorMessage,
         timestamp: new Date()
       }
       setMessages(prev => [...prev, errorMsg])
