@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { createClientSupabaseClient } from '@/lib/supabase-client'
 import { createDatabaseClient } from '@/lib/database-client'
 import { MODEL_CONFIG, type ModelName } from '@/lib/config-client'
@@ -35,6 +35,27 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
   const supabase = createClientSupabaseClient()
   const db = createDatabaseClient(supabase)
 
+  // Function to refresh user's tree count from database
+  const refreshTreeCount = useCallback(async () => {
+    try {
+      console.log('Refreshing tree count from database...') // Debug log
+      const { data: profile, error } = await supabase
+        .from('user_profiles')
+        .select('trees_planted')
+        .eq('id', userId)
+        .single()
+      
+      if (!error && profile) {
+        console.log(`Database tree count: ${profile.trees_planted}`) // Debug log
+        setTotalTrees(profile.trees_planted || 0)
+      } else {
+        console.error('Error fetching tree count from database:', error)
+      }
+    } catch (error) {
+      console.error('Failed to refresh tree count:', error)
+    }
+  }, [supabase, userId])
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
@@ -42,6 +63,11 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
   useEffect(() => {
     scrollToBottom()
   }, [messages])
+
+  // Refresh tree count on component mount
+  useEffect(() => {
+    refreshTreeCount()
+  }, [refreshTreeCount])
 
   // Create new session on first message
   const ensureSession = async () => {
@@ -90,6 +116,7 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
       if (!response.ok) throw new Error('Chat API error')
 
       const data = await response.json()
+      console.log('API Response data:', data) // Debug log
       
       // Add assistant message
       const assistantMsg: Message = {
@@ -102,10 +129,20 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
       
       setMessages(prev => [...prev, assistantMsg])
       
-      // Update tree count
-      if (data.treesAdded > 0) {
-        setTotalTrees(prev => prev + data.treesAdded)
+      // Update tree count immediately with the response data
+      if (data.treesAdded && data.treesAdded > 0) {
+        console.log(`Adding ${data.treesAdded} trees to counter`) // Debug log
+        setTotalTrees(prev => {
+          const newTotal = prev + data.treesAdded
+          console.log(`Tree count updated: ${prev} -> ${newTotal}`) // Debug log
+          return newTotal
+        })
+      } else {
+        console.log('No trees added in this response:', data.treesAdded) // Debug log
       }
+      
+      // Also refresh tree count from database to ensure accuracy
+      setTimeout(() => refreshTreeCount(), 1000)
 
     } catch (error) {
       console.error('Chat error:', error)
