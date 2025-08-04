@@ -93,10 +93,10 @@ $$;
 
 -- Verify the trigger was created
 SELECT 
-    schemaname,
-    tablename,
-    triggername,
-    triggerdef
+    n.nspname as schema_name,
+    c.relname as table_name,
+    t.tgname as trigger_name,
+    pg_get_triggerdef(t.oid) as trigger_definition
 FROM pg_trigger t
 JOIN pg_class c ON t.tgrelid = c.oid
 JOIN pg_namespace n ON c.relnamespace = n.oid
