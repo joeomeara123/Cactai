@@ -55,7 +55,7 @@ export default function WorkingChatPage() {
     <div className="min-h-screen bg-gray-900 text-white p-8">
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-green-400 mb-2">🌵 CactAI - Working Chat!</h1>
+          <h1 className="text-3xl font-bold text-green-400 mb-2">🌵 CactAI - Working Chat! (v2)</h1>
           <p className="text-gray-400">Client-side chat using Server Actions</p>
           <p className="text-sm text-gray-500 mt-2">Logged in as: {user.email}</p>
         </div>
