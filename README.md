@@ -2,6 +2,8 @@
 
 **The Social Good LLM** - Like Ecosia for AI conversations. Every query you make helps plant trees!
 
+*✅ GitHub/Vercel Integration Fixed - Deployments Now Working*
+
 CactAI is an AI chatbot platform that donates 40% of revenue to environmental causes. Users can chat with advanced AI models while knowing their conversations are helping to reforest the planet.
 
 ## Features
