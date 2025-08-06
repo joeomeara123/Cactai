@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, createContext, useContext, useMemo, useCallback } from 'react'
+import { useState, useEffect, createContext, useContext, useMemo } from 'react'
 import { createClientSupabaseClient } from '@/lib/supabase-client'
 import type { User } from '@supabase/supabase-js'
 
@@ -25,7 +25,7 @@ interface AuthWrapperProps {
 
 export default function AuthWrapper({ children }: AuthWrapperProps) {
   const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(false) // Start with false to prevent blocking
+  const [loading] = useState(false) // Start with false to prevent blocking
   
   // Memoize the Supabase client to prevent unnecessary re-renders
   const supabase = useMemo(() => createClientSupabaseClient(), [])

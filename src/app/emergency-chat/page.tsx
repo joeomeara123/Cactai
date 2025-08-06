@@ -24,8 +24,6 @@ export default async function EmergencyChatPage() {
     // In a real implementation, you'd store this in the database
     // For now, we'll just log it
     console.log('Chat result:', result)
-    
-    return result
   }
 
   return (

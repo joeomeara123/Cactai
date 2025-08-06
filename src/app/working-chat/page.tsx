@@ -39,7 +39,7 @@ export default function WorkingChatPage() {
       const { processChatMessage } = await import('@/app/actions/chat')
       const result = await processChatMessage(message.trim())
       
-      if (result.success) {
+      if (result.success && result.data) {
         setResponse(result.data.response)
       } else {
         setResponse(`Error: ${result.error}`)

@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       const body = await request.json()
       userId = body.userId
       console.log('🔧 Got userId from request body:', userId)
-    } catch (e) {
+    } catch {
       console.log('🔧 No JSON body, checking auth header')
     }
 

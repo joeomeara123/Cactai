@@ -72,7 +72,7 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
   // Ensure user profile exists on component mount
   useEffect(() => {
     ensureUserProfile()
-  }, [userId])
+  }, [userId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Create new session on first message
   const ensureSession = async () => {
@@ -146,7 +146,7 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
         try {
           const errorData = JSON.parse(errorText)
           console.error('Parsed error data:', errorData)
-        } catch (e) {
+        } catch {
           console.error('Could not parse error response as JSON')
         }
         
@@ -203,9 +203,9 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
       if (!sessionId) throw new Error('Failed to create session')
 
       // FORCE CACHE INVALIDATION: Use Server Action instead of API route (bypasses 405 errors)
-      console.log('🔧 Using Server Action instead of API route')
+      console.log('🔧 Using Server Action with model:', selectedModel)
       const { processChatMessage } = await import('@/app/actions/chat')
-      const result = await processChatMessage(userMessage)
+      const result = await processChatMessage(userMessage, selectedModel, sessionId)
       console.log('🔧 Server Action result:', result)
 
       if (!result.success) {
@@ -214,6 +214,9 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
       }
 
       const data = result.data
+      if (!data) {
+        throw new Error('No data received from server')
+      }
       console.log('API Response data:', data) // Debug log
       
       // Add assistant message
