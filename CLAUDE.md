@@ -2,15 +2,17 @@
 
 This file provides comprehensive guidance to Claude Code (claude.ai/code) when working with the CactAI project - a production-grade social good AI platform.
 
-## 🎉 PROJECT STATUS: PRODUCTION READY ✅
+## 🎉 PROJECT STATUS: STABLE & WORKING ✅
 
+**Current State:** 🏆 Working at commit `08c8a4d` - "Fix sidebar tree counter not updating in real-time"  
 **Build Status:** ✅ Successfully compiling with TypeScript strict mode  
-**Implementation:** 🏆 Phase 1 Complete - Enterprise-grade core functionality  
-**Security:** 🔒 Multi-layered protection with comprehensive audit logging  
-**Monitoring:** 📊 Full observability with structured logging and performance tracking  
-**Database:** 🗄️ Production schema with RLS policies and automated triggers  
+**OpenAI Integration:** ✅ Fully functional API route with complete AI integration  
+**Database:** ✅ All tables, functions, and RLS policies working correctly  
+**UI/UX:** ✅ Chat interface, tree counter, and authentication working perfectly  
+**Environment:** ✅ Local development fully operational, all systems verified
 
-**Last Updated:** January 2025 - Complete production-grade implementation
+**Last Updated:** August 2025 - Stable working implementation after resolving 405 error issues  
+**Critical Note:** ⚠️ Later commits (72e6b9b+) contain known issues - stay at 08c8a4d for reliable functionality
 
 ## Project Overview
 
@@ -422,4 +424,55 @@ vercel --prod                       # Manual production deployment
 - [ ] Error handling tested
 - [ ] Performance metrics within acceptable ranges
 
-This documentation represents a production-ready implementation of the social good AI platform concept, with enterprise-grade architecture, comprehensive error handling, and scalable design patterns.
+## 🚨 Recent Issues and Resolutions
+
+### The 405 Error Problem (Commits 72e6b9b - Latest)
+
+**Issue Summary:**  
+After commit `08c8a4d`, subsequent commits attempted to fix "405 Method Not Allowed" errors encountered in Vercel deployment. However, these "fixes" created more problems than they solved.
+
+**Root Cause Analysis:**  
+1. **Original Problem**: 405 errors were a deployment/infrastructure issue, not application code issue
+2. **Misguided Solution**: Switched from working API routes to Server Actions incorrectly
+3. **Critical Mistake**: Modified Server Action file but frontend still called API routes
+4. **Functionality Loss**: Stripped out OpenAI integration, database operations, and error handling
+
+**What Went Wrong in Commit 72e6b9b:**
+- ❌ **Removed 130 lines** of working OpenAI integration (`createChatCompletion`, `countTokens`)
+- ❌ **Eliminated database operations** (`DatabaseClient`, `recordQuery`, impact calculations)
+- ❌ **Created architectural mismatch**: Frontend calls `/api/chat` but "fix" was in Server Actions
+- ❌ **Replaced real AI responses** with hardcoded diagnostic messages
+- ❌ **Broke tree counting and environmental impact tracking**
+
+**The Fundamental Error:**
+```
+Frontend: fetch('/api/chat') → API Route (still broken)
+Backend: Server Action ("fixed" but never called)
+Result: Frontend gets 405 errors, backend "fix" never executes
+```
+
+**Correct Solution:**
+Instead of changing application architecture, the 405 errors should have been fixed by:
+1. Vercel deployment configuration (`vercel.json`)
+2. Environment variable validation in production
+3. API route headers and CORS configuration
+4. Or proper Server Action integration (not partial implementation)
+
+### Current Working Architecture (Commit 08c8a4d)
+
+**✅ What Works:**
+- **Frontend**: `ChatInterface.tsx` calls `fetch('/api/chat')` with proper error handling
+- **Backend**: `/api/chat/route.ts` handles requests with full OpenAI integration
+- **Flow**: Frontend → API Route → OpenAI API → Database → Tree Counting → Response
+- **Features**: Real AI responses, accurate tree planting calculations, proper database recording
+
+**✅ Verified Components:**
+- OpenAI API integration (tested with 82 models available)
+- Database connectivity (all 5 tables operational)
+- Authentication flow (Google OAuth working)
+- TypeScript compilation (zero errors)
+- Development server (running on localhost:3000)
+
+---
+
+This documentation represents a stable, working implementation of the social good AI platform concept. The current version (08c8a4d) provides full functionality with proper API route architecture, comprehensive error handling, and reliable environmental impact tracking.
