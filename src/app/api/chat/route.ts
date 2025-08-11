@@ -7,6 +7,10 @@ import { logger, ErrorCategory } from '@/lib/monitoring'
 import { rateLimiters, validateRequest, securitySchemas, getClientIp, auditLog } from '@/lib/security'
 import { z } from 'zod'
 
+// Vercel runtime configuration
+export const runtime = 'nodejs'
+export const maxDuration = 30
+
 // Request validation schema using security schemas
 const chatRequestSchema = z.object({
   message: securitySchemas.chatMessage,
@@ -372,6 +376,12 @@ export async function POST(request: NextRequest) {
       model,
       sessionId: currentSessionId,
       responseTimeMs: responseTime,
+    }, {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type'
+      }
     })
 
   } catch (error) {
@@ -431,7 +441,26 @@ export async function POST(request: NextRequest) {
           (error instanceof Error ? error.message : 'Unknown error') : undefined,
         correlationId // Include correlation ID for debugging
       },
-      { status: statusCode }
+      { 
+        status: statusCode,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type'
+        }
+      }
     )
   }
+}
+
+// Handle CORS preflight requests
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    },
+  })
 }
