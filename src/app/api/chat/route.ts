@@ -6,18 +6,20 @@ export const runtime = 'nodejs'
 export const maxDuration = 30
 
 // Simple request validation
-function validateRequest(body: any) {
-  if (!body.message || typeof body.message !== 'string') {
+function validateRequest(body: unknown) {
+  const req = body as { message?: string; model?: string; sessionId?: string; userId?: string }
+  
+  if (!req.message || typeof req.message !== 'string') {
     throw new Error('Message is required')
   }
-  if (body.message.length > 1000) {
+  if (req.message.length > 1000) {
     throw new Error('Message too long')
   }
   return {
-    message: body.message.trim(),
-    model: body.model || 'gpt-4o-mini',
-    sessionId: body.sessionId || null,
-    userId: body.userId || null
+    message: req.message.trim(),
+    model: req.model || 'gpt-4o-mini',
+    sessionId: req.sessionId || null,
+    userId: req.userId || null
   }
 }
 
