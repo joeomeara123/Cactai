@@ -4,7 +4,11 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { createClientSupabaseClient } from '@/lib/supabase-client'
 import { createDatabaseClient } from '@/lib/database-client'
 import { MODEL_CONFIG, type ModelName } from '@/lib/config-client'
-import { Send, TreePine, Sparkles, ChevronDown, User, Bot, Copy, ThumbsUp, ThumbsDown, RotateCcw, Share } from 'lucide-react'
+import { 
+  Send, TreePine, Sparkles, ChevronDown, 
+  User, Bot, Copy, ThumbsUp, ThumbsDown, 
+  RotateCcw, Share 
+} from 'lucide-react'
 import Sidebar from './Sidebar'
 import { useToast } from '@/components/ui/Toast'
 
@@ -52,7 +56,10 @@ function validateInput(input: string): { isValid: boolean; error?: string } {
   return { isValid: true }
 }
 
-export default function ChatInterface({ userId, userProfile }: ChatInterfaceProps) {
+export default function ChatInterface({ 
+  userId, 
+  userProfile 
+}: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -319,9 +326,12 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
 
     // Find the user message before this assistant message
     const userMessageIndex = messageIndex - 1
-    if (userMessageIndex < 0 || !messages[userMessageIndex] || messages[userMessageIndex].role !== 'user') return
+    const invalidUserMessage = userMessageIndex < 0 || 
+      !messages[userMessageIndex] || 
+      messages[userMessageIndex].role !== 'user'
+    if (invalidUserMessage) return
 
-    const userMessage = messages[userMessageIndex].content
+    const userMessage = messages[userMessageIndex]!.content
 
     // Remove all messages from this point onward
     setMessages(prev => prev.slice(0, userMessageIndex + 1))
@@ -404,7 +414,10 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
             <div className="relative">
               <button
                 onClick={() => setShowModelDropdown(!showModelDropdown)}
-                className="flex items-center gap-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors text-white"
+                className={cn(
+                  "flex items-center gap-2 px-3 py-2 bg-gray-700",
+                  "hover:bg-gray-600 rounded-lg transition-colors text-white"
+                )}
               >
                 <Sparkles className="w-4 h-4" />
                 <span className="text-sm font-medium">{selectedModel}</span>
@@ -412,7 +425,10 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
               </button>
               
               {showModelDropdown && (
-                <div className="absolute right-0 mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg z-10 min-w-48">
+                <div className={cn(
+                  "absolute right-0 mt-1 bg-gray-800 border border-gray-600",
+                  "rounded-lg shadow-lg z-10 min-w-48"
+                )}>
                   {Object.entries(MODEL_CONFIG).map(([modelKey, config]) => (
                     <button
                       key={modelKey}
@@ -420,7 +436,10 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
                         setSelectedModel(modelKey as ModelName)
                         setShowModelDropdown(false)
                       }}
-                      className="w-full text-left px-4 py-2 hover:bg-gray-700 first:rounded-t-lg last:rounded-b-lg text-white"
+                      className={cn(
+                        "w-full text-left px-4 py-2 hover:bg-gray-700",
+                        "first:rounded-t-lg last:rounded-b-lg text-white"
+                      )}
                     >
                       <div className="font-medium">{modelKey}</div>
                       <div className="text-xs text-gray-400">
@@ -543,7 +562,12 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
               ))}
 
               {isLoading && (
-                <div className="flex gap-4" role="status" aria-live="polite" aria-label="CactAI is generating a response">
+                <div 
+                  className="flex gap-4" 
+                  role="status" 
+                  aria-live="polite" 
+                  aria-label="CactAI is generating a response"
+                >
                   <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
                     <Bot className="w-4 h-4 text-white" />
                   </div>
@@ -558,8 +582,14 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
                       <span>Calculating environmental impact...</span>
                       <div className="flex gap-1 ml-2">
                         <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-bounce"></div>
-                        <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                        <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                        <div 
+                          className="w-1.5 h-1.5 bg-green-400 rounded-full animate-bounce" 
+                          style={{ animationDelay: '0.1s' }}
+                        ></div>
+                        <div 
+                          className="w-1.5 h-1.5 bg-green-400 rounded-full animate-bounce" 
+                          style={{ animationDelay: '0.2s' }}
+                        ></div>
                       </div>
                     </div>
                   </div>
