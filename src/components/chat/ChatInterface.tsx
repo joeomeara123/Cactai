@@ -8,6 +8,9 @@ import { Send, TreePine, Sparkles, ChevronDown, User, Bot, Copy, ThumbsUp, Thumb
 import Sidebar from './Sidebar'
 import { useToast } from '@/components/ui/Toast'
 
+// Utility to join class names cleanly
+const cn = (...classes: string[]) => classes.filter(Boolean).join(' ')
+
 interface Message {
   id: string
   role: 'user' | 'assistant'
@@ -492,41 +495,41 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
                         >
                           <button 
                             onClick={() => copyToClipboard(message.content)}
-                            className={`
-                              p-1 text-gray-400 hover:text-white transition-colors rounded
-                              focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50
-                            `}
+                            className={cn(
+                              "p-1 text-gray-400 hover:text-white transition-colors rounded",
+                              "focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50"
+                            )}
                             aria-label="Copy message to clipboard"
                           >
                             <Copy className="w-4 h-4" />
                           </button>
                           <button 
                             onClick={() => handleThumbsUp(message.id)}
-                            className={`
-                              p-1 text-gray-400 hover:text-green-400 transition-colors rounded
-                              focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50
-                            `}
+                            className={cn(
+                              "p-1 text-gray-400 hover:text-green-400 transition-colors rounded",
+                              "focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50"
+                            )}
                             aria-label="Rate this response as helpful"
                           >
                             <ThumbsUp className="w-4 h-4" />
                           </button>
                           <button 
                             onClick={() => handleThumbsDown(message.id)}
-                            className={`
-                              p-1 text-gray-400 hover:text-red-400 transition-colors rounded
-                              focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50
-                            `}
+                            className={cn(
+                              "p-1 text-gray-400 hover:text-red-400 transition-colors rounded",
+                              "focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50"
+                            )}
                             aria-label="Rate this response as not helpful"
                           >
                             <ThumbsDown className="w-4 h-4" />
                           </button>
                           <button 
                             onClick={() => handleRegenerateMessage(message.id)}
-                            className={`
-                              p-1 text-gray-400 hover:text-blue-400 transition-colors rounded
-                              focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50
-                              disabled:opacity-50
-                            `}
+                            className={cn(
+                              "p-1 text-gray-400 hover:text-blue-400 transition-colors rounded",
+                              "focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50",
+                              "disabled:opacity-50"
+                            )}
                             aria-label={isLoading ? 'Regenerating response...' : 'Regenerate response'}
                             disabled={isLoading}
                           >
@@ -579,10 +582,10 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
                 onChange={handleInputChange}
                 onKeyPress={handleKeyPress}
                 placeholder="Message CactAI..."
-                className={`
-                  w-full p-4 pr-12 bg-transparent text-white placeholder-gray-400 resize-none
-                  focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50
-                `}
+                className={cn(
+                  "w-full p-4 pr-12 bg-transparent text-white placeholder-gray-400 resize-none",
+                  "focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50"
+                )}
                 rows={1}
                 style={{ minHeight: '52px', maxHeight: '120px' }}
                 aria-label="Type your message to CactAI"
@@ -592,12 +595,12 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
               <button
                 onClick={handleSend}
                 disabled={!input.trim() || isLoading || inputError !== null}
-                className={`
-                  absolute right-3 bottom-3 p-2 bg-white text-black rounded-full
-                  hover:bg-gray-200 disabled:bg-gray-600 disabled:text-gray-400
-                  disabled:cursor-not-allowed transition-colors
-                  focus:outline-none focus:ring-2 focus:ring-green-500
-                `}
+                className={cn(
+                  "absolute right-3 bottom-3 p-2 bg-white text-black rounded-full",
+                  "hover:bg-gray-200 disabled:bg-gray-600 disabled:text-gray-400",
+                  "disabled:cursor-not-allowed transition-colors",
+                  "focus:outline-none focus:ring-2 focus:ring-green-500"
+                )}
                 aria-label={isLoading ? 'Sending message...' : 'Send message'}
               >
                 <Send className="w-4 h-4" />
