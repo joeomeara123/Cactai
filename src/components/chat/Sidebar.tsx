@@ -1,20 +1,184 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { TreePine, Plus, MessageSquare, Settings, LogOut, Edit2, Trash2 } from 'lucide-react'
+import { createClientSupabaseClient } from '@/lib/supabase-client'
+import { createDatabaseClient } from '@/lib/database-client'
 
 interface SidebarProps {
   totalTrees: number
   onNewChat: () => void
   onSignOut: () => void
+  userId: string
+  currentSessionId?: string | null
+  onSessionSelect?: (sessionId: string) => void
 }
 
-export default function Sidebar({ totalTrees, onNewChat, onSignOut }: SidebarProps) {
-  const [recentChats] = useState([
-    { id: '1', title: 'How to reduce carbon footprint?', timestamp: '2 hours ago' },
-    { id: '2', title: 'Climate change solutions', timestamp: '1 day ago' },
-    { id: '3', title: 'Renewable energy options', timestamp: '3 days ago' },
-  ])
+interface ChatSession {
+  id: string
+  title: string
+  created_at: string
+  message_count?: number
+}
+
+// Utility functions for tree count formatting
+function formatTreeCount(trees: number): string {
+  if (trees >= 1) return trees.toFixed(2)
+  if (trees >= 0.1) return trees.toFixed(3)
+  if (trees >= 0.001) return trees.toFixed(4)
+  if (trees > 0) return `${(trees * 1000).toFixed(1)} milli`
+  return '0'
+}
+
+function getTreeMessage(trees: number): string {
+  if (trees >= 1) return 'Trees planted! 🌳'
+  if (trees >= 0.001) return 'Growing your forest 🌱'
+  if (trees > 0) return 'Every chat helps! 🌱'
+  return 'Start chatting to plant trees 🌱'
+}
+
+export default function Sidebar({ totalTrees, onNewChat, onSignOut, userId, currentSessionId, onSessionSelect }: SidebarProps) {
+  const [recentChats, setRecentChats] = useState<ChatSession[]>([])
+  const [isLoadingChats, setIsLoadingChats] = useState(true)
+  const [editingChatId, setEditingChatId] = useState<string | null>(null)
+  const [editingTitle, setEditingTitle] = useState('')
+
+  const supabase = createClientSupabaseClient()
+  const db = createDatabaseClient(supabase)
+
+  const loadChatSessions = useCallback(async () => {
+    try {
+      setIsLoadingChats(true)
+      const sessions = await db.getChatSessions(userId)
+      setRecentChats(sessions)
+    } catch (error) {
+      console.error('Failed to load chat sessions:', error)
+    } finally {
+      setIsLoadingChats(false)
+    }
+  }, [db, userId])
+
+  useEffect(() => {
+    loadChatSessions()
+
+    // Set up real-time subscription for chat sessions
+    const sessionsSubscription = supabase
+      .channel('chat-sessions-changes')
+      .on('postgres_changes',
+        {
+          event: '*',
+          schema: 'public', 
+          table: 'chat_sessions',
+          filter: `user_id=eq.${userId}`
+        },
+        (payload) => {
+          console.log('Real-time session update:', payload)
+          
+          if (payload.eventType === 'INSERT' && payload.new) {
+            // Add new session
+            setRecentChats(prev => [payload.new as ChatSession, ...prev])
+          } else if (payload.eventType === 'UPDATE' && payload.new) {
+            // Update existing session
+            setRecentChats(prev => 
+              prev.map(chat => 
+                chat.id === payload.new.id ? payload.new as ChatSession : chat
+              )
+            )
+          } else if (payload.eventType === 'DELETE' && payload.old) {
+            // Remove deleted session
+            setRecentChats(prev => prev.filter(chat => chat.id !== payload.old.id))
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      sessionsSubscription.unsubscribe()
+    }
+  }, [loadChatSessions, supabase, userId])
+
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp)
+    const now = new Date()
+    const diff = now.getTime() - date.getTime()
+    const minutes = Math.floor(diff / (1000 * 60))
+    const hours = Math.floor(diff / (1000 * 60 * 60))
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+
+    if (minutes < 60) return `${minutes}m ago`
+    if (hours < 24) return `${hours}h ago`
+    if (days < 7) return `${days}d ago`
+    return date.toLocaleDateString()
+  }
+
+  const handleEditStart = (chatId: string, currentTitle: string) => {
+    setEditingChatId(chatId)
+    setEditingTitle(currentTitle)
+  }
+
+  const handleEditSave = async (chatId: string) => {
+    try {
+      // Update chat session title in database
+      const { error } = await supabase
+        .from('chat_sessions')
+        .update({ title: editingTitle })
+        .eq('id', chatId)
+
+      if (!error) {
+        // Update local state
+        setRecentChats(prev => 
+          prev.map(chat => 
+            chat.id === chatId ? { ...chat, title: editingTitle } : chat
+          )
+        )
+      }
+    } catch (error) {
+      console.error('Failed to update chat title:', error)
+    }
+    setEditingChatId(null)
+    setEditingTitle('')
+  }
+
+  const handleEditCancel = () => {
+    setEditingChatId(null)
+    setEditingTitle('')
+  }
+
+  const handleDeleteChat = async (chatId: string) => {
+    // Optimistic update - remove from UI immediately
+    const chatToDelete = recentChats.find(chat => chat.id === chatId)
+    setRecentChats(prev => prev.filter(chat => chat.id !== chatId))
+    
+    try {
+      const { error } = await supabase
+        .from('chat_sessions')
+        .delete()
+        .eq('id', chatId)
+
+      if (error) {
+        // Rollback on error
+        if (chatToDelete) {
+          setRecentChats(prev => [...prev, chatToDelete].sort((a, b) => 
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          ))
+        }
+        console.error('Failed to delete chat:', error)
+      } else {
+        // If we deleted the current session, start a new chat
+        if (currentSessionId === chatId) {
+          onNewChat()
+        }
+      }
+    } catch (error) {
+      // Rollback on error
+      if (chatToDelete) {
+        setRecentChats(prev => [...prev, chatToDelete].sort((a, b) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        ))
+      }
+      console.error('Failed to delete chat:', error)
+    }
+  }
 
   return (
     <div className="w-64 bg-gray-900 text-white flex flex-col h-full">
@@ -43,26 +207,10 @@ export default function Sidebar({ totalTrees, onNewChat, onSignOut }: SidebarPro
             <span className="text-green-400 font-semibold">Trees Planted</span>
           </div>
           <div className="text-2xl font-bold text-white">
-            {totalTrees >= 1 
-              ? totalTrees.toFixed(2)
-              : totalTrees >= 0.1
-              ? totalTrees.toFixed(3)
-              : totalTrees >= 0.001
-              ? totalTrees.toFixed(4)
-              : totalTrees > 0
-              ? `${(totalTrees * 1000).toFixed(1)} milli`
-              : '0'
-            }
+            {formatTreeCount(totalTrees)}
           </div>
           <div className="text-sm text-gray-400">
-            {totalTrees >= 1 
-              ? 'Trees planted! 🌳'
-              : totalTrees >= 0.001
-              ? 'Growing your forest 🌱'
-              : totalTrees > 0
-              ? 'Every chat helps! 🌱'
-              : 'Start chatting to plant trees 🌱'
-            }
+            {getTreeMessage(totalTrees)}
           </div>
         </div>
       </div>
@@ -72,28 +220,83 @@ export default function Sidebar({ totalTrees, onNewChat, onSignOut }: SidebarPro
         <div className="p-4">
           <h3 className="text-sm font-medium text-gray-400 mb-3">Recent</h3>
           <div className="space-y-1">
-            {recentChats.map((chat) => (
-              <div
-                key={chat.id}
-                className="group flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-800 cursor-pointer"
-              >
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <MessageSquare className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm text-white truncate">{chat.title}</div>
-                    <div className="text-xs text-gray-400">{chat.timestamp}</div>
+            {isLoadingChats ? (
+              // Loading skeleton
+              Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="px-3 py-2 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-4 h-4 bg-gray-700 rounded animate-pulse"></div>
+                    <div className="flex-1">
+                      <div className="h-3 bg-gray-700 rounded animate-pulse mb-1"></div>
+                      <div className="h-2 bg-gray-700 rounded animate-pulse w-16"></div>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
-                  <button className="p-1 hover:bg-gray-700 rounded">
-                    <Edit2 className="w-3 h-3 text-gray-400" />
-                  </button>
-                  <button className="p-1 hover:bg-gray-700 rounded">
-                    <Trash2 className="w-3 h-3 text-gray-400" />
-                  </button>
-                </div>
+              ))
+            ) : recentChats.length === 0 ? (
+              // Empty state
+              <div className="text-center py-8">
+                <MessageSquare className="w-8 h-8 text-gray-600 mx-auto mb-2" />
+                <p className="text-sm text-gray-500">No conversations yet</p>
+                <p className="text-xs text-gray-600">Start chatting to see your history</p>
               </div>
-            ))}
+            ) : (
+              // Chat list
+              recentChats.map((chat) => (
+                <div
+                  key={chat.id}
+                  className={`group flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-800 cursor-pointer ${
+                    currentSessionId === chat.id ? 'bg-gray-800' : ''
+                  }`}
+                  onClick={() => onSessionSelect?.(chat.id)}
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <MessageSquare className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      {editingChatId === chat.id ? (
+                        <input
+                          type="text"
+                          value={editingTitle}
+                          onChange={(e) => setEditingTitle(e.target.value)}
+                          onBlur={() => handleEditSave(chat.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleEditSave(chat.id)
+                            if (e.key === 'Escape') handleEditCancel()
+                          }}
+                          className="text-sm bg-gray-700 text-white px-2 py-1 rounded w-full"
+                          autoFocus
+                        />
+                      ) : (
+                        <>
+                          <div className="text-sm text-white truncate">{chat.title}</div>
+                          <div className="text-xs text-gray-400">{formatTimestamp(chat.created_at)}</div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleEditStart(chat.id, chat.title)
+                      }}
+                      className="p-1 hover:bg-gray-700 rounded"
+                    >
+                      <Edit2 className="w-3 h-3 text-gray-400" />
+                    </button>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDeleteChat(chat.id)
+                      }}
+                      className="p-1 hover:bg-gray-700 rounded"
+                    >
+                      <Trash2 className="w-3 h-3 text-gray-400" />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

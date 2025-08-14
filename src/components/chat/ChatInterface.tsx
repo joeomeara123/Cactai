@@ -6,6 +6,7 @@ import { createDatabaseClient } from '@/lib/database-client'
 import { MODEL_CONFIG, type ModelName } from '@/lib/config-client'
 import { Send, TreePine, Sparkles, ChevronDown, User, Bot, Copy, ThumbsUp, ThumbsDown, RotateCcw, Share } from 'lucide-react'
 import Sidebar from './Sidebar'
+import { useToast } from '@/components/ui/Toast'
 
 interface Message {
   id: string
@@ -22,6 +23,32 @@ interface ChatInterfaceProps {
   }
 }
 
+// Utility function for formatting trees added in messages
+function formatTreesAdded(trees: number): string {
+  if (trees >= 0.001) return `+${trees.toFixed(4)} trees planted!`
+  if (trees > 0) return `+${(trees * 1000).toFixed(1)} milli-trees planted!`
+  return '+Impact recorded!'
+}
+
+// Input validation function
+function validateInput(input: string): { isValid: boolean; error?: string } {
+  const trimmed = input.trim()
+  
+  if (!trimmed) {
+    return { isValid: false, error: 'Message cannot be empty' }
+  }
+  
+  if (trimmed.length > 1000) {
+    return { isValid: false, error: 'Message is too long (max 1000 characters)' }
+  }
+  
+  if (trimmed.length < 2) {
+    return { isValid: false, error: 'Message is too short (min 2 characters)' }
+  }
+  
+  return { isValid: true }
+}
+
 export default function ChatInterface({ userId, userProfile }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -30,10 +57,12 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
   const [selectedModel, setSelectedModel] = useState<ModelName>('gpt-4o-mini')
   const [showModelDropdown, setShowModelDropdown] = useState(false)
   const [totalTrees, setTotalTrees] = useState(userProfile?.trees_planted || 0)
+  const [inputError, setInputError] = useState<string | null>(null)
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const supabase = createClientSupabaseClient()
   const db = createDatabaseClient(supabase)
+  const { showToast, ToastContainer } = useToast()
 
   // Function to refresh user's tree count from database
   const refreshTreeCount = useCallback(async () => {
@@ -53,6 +82,7 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
       }
     } catch (error) {
       console.error('Failed to refresh tree count:', error)
+      // Don't show toast for this as it's a background operation
     }
   }, [supabase, userId])
 
@@ -64,12 +94,46 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
     scrollToBottom()
   }, [messages])
 
-  // Refresh tree count on component mount
+  // Initialize session, refresh tree count, and set up real-time subscriptions
   useEffect(() => {
-    refreshTreeCount()
-  }, [refreshTreeCount])
+    const initializeSession = async () => {
+      // Only create a session if we don't have one and there are no messages
+      if (!currentSession && messages.length === 0) {
+        const sessionId = await db.createChatSession(userId, 'New Chat')
+        if (sessionId) {
+          setCurrentSession(sessionId)
+        }
+      }
+    }
 
-  // Create new session on first message
+    refreshTreeCount()
+    initializeSession()
+
+    // Set up real-time subscription for user profile updates (tree count)
+    const profileSubscription = supabase
+      .channel('user-profile-changes')
+      .on('postgres_changes', 
+        { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'user_profiles',
+          filter: `id=eq.${userId}`
+        }, 
+        (payload) => {
+          console.log('Real-time profile update:', payload)
+          if (payload.new && typeof payload.new.trees_planted === 'number') {
+            setTotalTrees(payload.new.trees_planted)
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      profileSubscription.unsubscribe()
+    }
+  }, [refreshTreeCount, db, userId, currentSession, messages.length, supabase])
+
+  // Ensure session exists (now mostly for edge cases)
   const ensureSession = async () => {
     if (!currentSession) {
       const sessionId = await db.createChatSession(userId, 'New Chat')
@@ -81,11 +145,33 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
     return currentSession
   }
 
+  // Load messages for a selected session
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const loadSessionMessages = async (_sessionId: string) => {
+    try {
+      // This would require a new database method to get messages by session
+      // For now, we'll just clear the messages when switching sessions
+      setMessages([])
+      // TODO: Implement db.getSessionMessages(sessionId) and populate messages
+    } catch (error) {
+      console.error('Failed to load session messages:', error)
+      showToast('Failed to load conversation history', 'error')
+    }
+  }
+
   const handleSend = async () => {
-    if (!input.trim() || isLoading) return
+    if (isLoading) return
+
+    // Validate input
+    const validation = validateInput(input)
+    if (!validation.isValid) {
+      setInputError(validation.error || 'Invalid input')
+      return
+    }
 
     const userMessage = input.trim()
     setInput('')
+    setInputError(null)
     setIsLoading(true)
 
     // Add user message to UI immediately
@@ -129,7 +215,7 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
       
       setMessages(prev => [...prev, assistantMsg])
       
-      // Update tree count immediately with the response data
+      // Optimistic tree count update
       if (data.treesAdded && data.treesAdded > 0) {
         console.log(`Adding ${data.treesAdded} trees to counter`) // Debug log
         setTotalTrees(prev => {
@@ -137,25 +223,44 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
           console.log(`Tree count updated: ${prev} -> ${newTotal}`) // Debug log
           return newTotal
         })
-      } else {
-        console.log('No trees added in this response:', data.treesAdded) // Debug log
+        
+        // Show success toast for tree planting
+        if (data.treesAdded >= 0.001) {
+          showToast(`🌱 ${data.treesAdded.toFixed(4)} trees planted!`, 'success')
+        }
       }
       
-      // Also refresh tree count from database to ensure accuracy
-      setTimeout(() => refreshTreeCount(), 1000)
+      // Sync with database after a short delay
+      setTimeout(() => refreshTreeCount(), 1500)
 
     } catch (error) {
       console.error('Chat error:', error)
-      // Add error message
-      const errorMsg: Message = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: 'Sorry, something went wrong. Please try again.',
-        timestamp: new Date()
-      }
-      setMessages(prev => [...prev, errorMsg])
+      
+      // Rollback optimistic updates
+      setMessages(prev => prev.slice(0, -1)) // Remove user message
+      
+      // Show error with retry option
+      showToast(
+        'Failed to send message. Please try again.',
+        'error'
+      )
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newValue = e.target.value
+    setInput(newValue)
+    
+    // Clear error when user starts typing after an error
+    if (inputError) {
+      setInputError(null)
+    }
+    
+    // Real-time validation for length
+    if (newValue.length > 1000) {
+      setInputError('Message is too long (max 1000 characters)')
     }
   }
 
@@ -179,6 +284,7 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text)
+      showToast('Message copied to clipboard!', 'success')
     } catch (error) {
       console.error('Failed to copy to clipboard:', error)
       // Fallback for older browsers or when clipboard API is not available
@@ -188,17 +294,98 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
       textArea.select()
       document.execCommand('copy')
       document.body.removeChild(textArea)
+      showToast('Message copied to clipboard!', 'success')
+    }
+  }
+
+  const handleThumbsUp = (messageId: string) => {
+    // TODO: Send feedback to database
+    showToast('Thanks for your feedback!', 'success')
+    console.log('Thumbs up for message:', messageId)
+  }
+
+  const handleThumbsDown = (messageId: string) => {
+    // TODO: Send feedback to database  
+    showToast('Thanks for your feedback!', 'success')
+    console.log('Thumbs down for message:', messageId)
+  }
+
+  const handleRegenerateMessage = async (messageId: string) => {
+    const messageIndex = messages.findIndex(msg => msg.id === messageId)
+    if (messageIndex === -1) return
+
+    // Find the user message before this assistant message
+    const userMessageIndex = messageIndex - 1
+    if (userMessageIndex < 0 || !messages[userMessageIndex] || messages[userMessageIndex].role !== 'user') return
+
+    const userMessage = messages[userMessageIndex].content
+
+    // Remove all messages from this point onward
+    setMessages(prev => prev.slice(0, userMessageIndex + 1))
+    setIsLoading(true)
+
+    try {
+      const sessionId = await ensureSession()
+      if (!sessionId) throw new Error('Failed to create session')
+
+      // Call API route for OpenAI completion
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: userMessage,
+          sessionId,
+          model: selectedModel,
+          userId
+        })
+      })
+
+      if (!response.ok) throw new Error('Chat API error')
+
+      const data = await response.json()
+      
+      // Add regenerated assistant message
+      const regeneratedMsg: Message = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: data.response,
+        timestamp: new Date(),
+        treesAdded: data.treesAdded
+      }
+      
+      setMessages(prev => [...prev, regeneratedMsg])
+      
+      // Update tree count
+      if (data.treesAdded && data.treesAdded > 0) {
+        setTotalTrees(prev => prev + data.treesAdded)
+      }
+      
+      setTimeout(() => refreshTreeCount(), 1000)
+
+    } catch (error) {
+      console.error('Regeneration error:', error)
+      showToast('Failed to regenerate message. Please try again.', 'error')
+    } finally {
+      setIsLoading(false)
     }
   }
 
   return (
-    <div className="flex h-screen bg-gray-900">
-      {/* Sidebar */}
-      <Sidebar 
-        totalTrees={totalTrees}
-        onNewChat={handleNewChat}
-        onSignOut={handleSignOut}
-      />
+    <>
+      <ToastContainer />
+      <div className="flex h-screen bg-gray-900">
+        {/* Sidebar */}
+        <Sidebar 
+          totalTrees={totalTrees}
+          onNewChat={handleNewChat}
+          onSignOut={handleSignOut}
+          userId={userId}
+          currentSessionId={currentSession}
+          onSessionSelect={(sessionId) => {
+            setCurrentSession(sessionId)
+            loadSessionMessages(sessionId)
+          }}
+        />
       
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
@@ -292,33 +479,45 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
                               <div className="text-sm text-green-400 flex items-center gap-2">
                                 <TreePine className="w-4 h-4" />
                                 <span>
-                                  {message.treesAdded >= 0.001 
-                                    ? `+${message.treesAdded.toFixed(4)} trees planted!`
-                                    : message.treesAdded > 0
-                                    ? `+${(message.treesAdded * 1000).toFixed(1)} milli-trees planted!`
-                                    : '+Impact recorded!'
-                                  } 🌱
+                                  {formatTreesAdded(message.treesAdded)} 🌱
                                 </span>
                               </div>
                             </div>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div 
+                          className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                          role="toolbar"
+                          aria-label="Message actions"
+                        >
                           <button 
                             onClick={() => copyToClipboard(message.content)}
-                            className="p-1 text-gray-400 hover:text-white transition-colors"
-                            title="Copy"
+                            className="p-1 text-gray-400 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 rounded"
+                            aria-label="Copy message to clipboard"
                           >
                             <Copy className="w-4 h-4" />
                           </button>
-                          <button className="p-1 text-gray-400 hover:text-white transition-colors" title="Good response">
+                          <button 
+                            onClick={() => handleThumbsUp(message.id)}
+                            className="p-1 text-gray-400 hover:text-green-400 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 rounded" 
+                            aria-label="Rate this response as helpful"
+                          >
                             <ThumbsUp className="w-4 h-4" />
                           </button>
-                          <button className="p-1 text-gray-400 hover:text-white transition-colors" title="Bad response">
+                          <button 
+                            onClick={() => handleThumbsDown(message.id)}
+                            className="p-1 text-gray-400 hover:text-red-400 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 rounded" 
+                            aria-label="Rate this response as not helpful"
+                          >
                             <ThumbsDown className="w-4 h-4" />
                           </button>
-                          <button className="p-1 text-gray-400 hover:text-white transition-colors" title="Regenerate">
-                            <RotateCcw className="w-4 h-4" />
+                          <button 
+                            onClick={() => handleRegenerateMessage(message.id)}
+                            className="p-1 text-gray-400 hover:text-blue-400 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 rounded disabled:opacity-50" 
+                            aria-label={isLoading ? 'Regenerating response...' : 'Regenerate response'}
+                            disabled={isLoading}
+                          >
+                            <RotateCcw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
                           </button>
                         </div>
                       </div>
@@ -328,15 +527,24 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
               ))}
 
               {isLoading && (
-                <div className="flex gap-4">
+                <div className="flex gap-4" role="status" aria-live="polite" aria-label="CactAI is generating a response">
                   <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
                     <Bot className="w-4 h-4 text-white" />
                   </div>
-                  <div className="text-white">
-                    <div className="flex gap-1">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="flex-1 max-w-2xl">
+                    <div className="space-y-2">
+                      <div className="h-4 bg-gray-700 rounded animate-pulse w-3/4"></div>
+                      <div className="h-4 bg-gray-700 rounded animate-pulse w-1/2"></div>
+                      <div className="h-4 bg-gray-700 rounded animate-pulse w-2/3"></div>
+                    </div>
+                    <div className="mt-3 flex items-center gap-2 text-green-400 text-sm">
+                      <TreePine className="w-4 h-4" />
+                      <span>Calculating environmental impact...</span>
+                      <div className="flex gap-1 ml-2">
+                        <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-bounce"></div>
+                        <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                        <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -350,32 +558,61 @@ export default function ChatInterface({ userId, userProfile }: ChatInterfaceProp
         {/* Input */}
         <div className="border-t border-gray-700 bg-gray-900 p-4">
           <div className="max-w-3xl mx-auto">
-            <div className="relative bg-gray-800 rounded-3xl border border-gray-600">
+            <div className={`relative bg-gray-800 rounded-3xl border transition-colors ${
+              inputError ? 'border-red-500' : 'border-gray-600'
+            }`}>
               <textarea
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={handleInputChange}
                 onKeyPress={handleKeyPress}
                 placeholder="Message CactAI..."
-                className="w-full p-4 pr-12 bg-transparent text-white placeholder-gray-400 resize-none focus:outline-none"
+                className="w-full p-4 pr-12 bg-transparent text-white placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50"
                 rows={1}
                 style={{ minHeight: '52px', maxHeight: '120px' }}
+                aria-label="Type your message to CactAI"
+                aria-describedby="input-error input-counter"
+                aria-invalid={inputError ? 'true' : 'false'}
               />
               <button
                 onClick={handleSend}
-                disabled={!input.trim() || isLoading}
-                className="absolute right-3 bottom-3 p-2 bg-white text-black rounded-full hover:bg-gray-200 disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+                disabled={!input.trim() || isLoading || inputError !== null}
+                className="absolute right-3 bottom-3 p-2 bg-white text-black rounded-full hover:bg-gray-200 disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-green-500"
+                aria-label={isLoading ? 'Sending message...' : 'Send message'}
               >
                 <Send className="w-4 h-4" />
               </button>
             </div>
             
-            <div className="text-center mt-3 text-xs text-gray-500">
+            {/* Error message and character count */}
+            <div className="flex justify-between items-center mt-2 text-xs">
+              <div 
+                id="input-error" 
+                className="text-red-400"
+                role="alert"
+                aria-live="polite"
+              >
+                {inputError}
+              </div>
+              <div 
+                id="input-counter"
+                className={`${
+                  input.length > 900 ? 'text-orange-400' : 
+                  input.length > 800 ? 'text-yellow-400' : 'text-gray-500'
+                }`}
+                aria-label={`${input.length} of 1000 characters used`}
+              >
+                {input.length}/1000
+              </div>
+            </div>
+            
+            <div className="text-center mt-2 text-xs text-gray-500">
               CactAI can make mistakes. Check important info. See{' '}
               <button className="underline hover:text-gray-400">Cookie Preferences</button>.
             </div>
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   )
 }
