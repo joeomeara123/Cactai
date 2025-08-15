@@ -5,6 +5,9 @@ import { TreePine, Plus, MessageSquare, Settings, LogOut, Edit2, Trash2 } from '
 import { createClientSupabaseClient } from '@/lib/supabase-client'
 import { createDatabaseClient } from '@/lib/database-client'
 
+// Utility to join class names cleanly
+const cn = (...classes: string[]) => classes.filter(Boolean).join(' ')
+
 interface SidebarProps {
   totalTrees: number
   onNewChat: () => void
@@ -245,9 +248,10 @@ export default function Sidebar({ totalTrees, onNewChat, onSignOut, userId, curr
               recentChats.map((chat) => (
                 <div
                   key={chat.id}
-                  className={`group flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-800 cursor-pointer ${
+                  className={cn(
+                    "group flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-800 cursor-pointer",
                     currentSessionId === chat.id ? 'bg-gray-800' : ''
-                  }`}
+                  )}
                   onClick={() => onSessionSelect?.(chat.id)}
                 >
                   <div className="flex items-center gap-3 flex-1 min-w-0">

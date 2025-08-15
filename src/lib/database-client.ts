@@ -138,6 +138,56 @@ export class DatabaseClient {
     })) || []
   }
 
+  // NEW METHOD: Get messages for a chat session
+  async getSessionMessages(sessionId: string): Promise<Array<{
+    id: string
+    role: 'user' | 'assistant'
+    content: string
+    timestamp: Date
+    treesAdded?: number
+  }>> {
+    const { data, error } = await this.supabase
+      .from('queries')
+      .select('id, user_message, assistant_response, trees_added, created_at')
+      .eq('session_id', sessionId)
+      .order('created_at', { ascending: true })
+
+    if (error) {
+      console.error('Error fetching session messages:', error)
+      return []
+    }
+
+    // Convert query records to chat messages format
+    const messages: Array<{
+      id: string
+      role: 'user' | 'assistant'
+      content: string
+      timestamp: Date
+      treesAdded?: number
+    }> = []
+
+    data?.forEach(query => {
+      // Add user message
+      messages.push({
+        id: `${query.id}-user`,
+        role: 'user',
+        content: query.user_message,
+        timestamp: new Date(query.created_at)
+      })
+
+      // Add assistant message
+      messages.push({
+        id: `${query.id}-assistant`,
+        role: 'assistant',
+        content: query.assistant_response,
+        timestamp: new Date(query.created_at),
+        treesAdded: query.trees_added
+      })
+    })
+
+    return messages
+  }
+
   // IMPACT & MILESTONE OPERATIONS
   async getUserImpact(userId: string): Promise<UserImpact | null> {
     const { data, error } = await this.supabase
