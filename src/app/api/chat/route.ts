@@ -72,7 +72,7 @@ async function saveQueryToDatabase(
         user_id: userId,
         session_id: sessionId,
         user_message: userMessage,
-        assistant_response: assistantResponse,
+        assistant_message: assistantResponse,
         input_tokens: inputTokens,
         output_tokens: outputTokens,
         input_cost: impact.inputCost,

@@ -149,7 +149,7 @@ export class DatabaseClient {
   }>> {
     const { data, error } = await this.supabase
       .from('queries')
-      .select('id, user_message, assistant_response, trees_added, created_at')
+      .select('id, user_message, assistant_message, trees_added, created_at')
       .eq('session_id', sessionId)
       .order('created_at', { ascending: true })
 
@@ -180,7 +180,7 @@ export class DatabaseClient {
       messages.push({
         id: `${query.id}-assistant`,
         role: 'assistant',
-        content: query.assistant_response,
+        content: query.assistant_message,
         timestamp: new Date(query.created_at),
         treesAdded: query.trees_added
       })
