@@ -86,6 +86,7 @@ export default function ChatInterface({
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const refreshSessionsRef = useRef<(() => void) | null>(null)
   const supabase = createClientSupabaseClient()
   const db = createDatabaseClient(supabase)
   const { showToast, ToastContainer } = useToast()
@@ -370,6 +371,14 @@ export default function ChatInterface({
         setCurrentSession(sessionId)
         console.log('✅ New chat session created:', sessionId)
         showToast('New conversation started', 'success')
+        
+        // Manually refresh sidebar sessions if real-time doesn't work
+        setTimeout(() => {
+          if (refreshSessionsRef.current) {
+            console.log('🔄 Manually refreshing sidebar sessions')
+            refreshSessionsRef.current()
+          }
+        }, 500)
       } else {
         console.error('❌ Failed to create new chat session')
         showToast('Failed to start new conversation', 'error')
@@ -535,6 +544,9 @@ export default function ChatInterface({
           onSessionSelect={(sessionId) => {
             setCurrentSession(sessionId)
             loadSessionMessages(sessionId)
+          }}
+          onRefreshSessions={(refreshFn) => {
+            refreshSessionsRef.current = refreshFn
           }}
         />
       

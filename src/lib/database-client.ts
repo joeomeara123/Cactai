@@ -43,7 +43,7 @@ export class DatabaseClient {
         user_id: userId,
         title: title || 'New Chat'
       })
-      .select('id')
+      .select('*')
       .single()
 
     if (error) {
@@ -51,6 +51,7 @@ export class DatabaseClient {
       return null
     }
 
+    console.log('✅ Chat session created:', data)
     return data.id
   }
 

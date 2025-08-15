@@ -15,6 +15,7 @@ interface SidebarProps {
   userId: string
   currentSessionId?: string | null
   onSessionSelect?: (sessionId: string) => void
+  onRefreshSessions?: (refreshFn: () => void) => void
 }
 
 interface ChatSession {
@@ -40,7 +41,7 @@ function getTreeMessage(trees: number): string {
   return 'Start chatting to plant trees 🌱'
 }
 
-export default function Sidebar({ totalTrees, onNewChat, onSignOut, userId, currentSessionId, onSessionSelect }: SidebarProps) {
+export default function Sidebar({ totalTrees, onNewChat, onSignOut, userId, currentSessionId, onSessionSelect, onRefreshSessions }: SidebarProps) {
   const [recentChats, setRecentChats] = useState<ChatSession[]>([])
   const [isLoadingChats, setIsLoadingChats] = useState(true)
   const [editingChatId, setEditingChatId] = useState<string | null>(null)
@@ -79,9 +80,11 @@ export default function Sidebar({ totalTrees, onNewChat, onSignOut, userId, curr
           
           if (payload.eventType === 'INSERT' && payload.new) {
             // Add new session
+            console.log('Adding new session to sidebar:', payload.new)
             setRecentChats(prev => [payload.new as ChatSession, ...prev])
           } else if (payload.eventType === 'UPDATE' && payload.new) {
             // Update existing session
+            console.log('Updating session in sidebar:', payload.new)
             setRecentChats(prev => 
               prev.map(chat => 
                 chat.id === payload.new.id ? payload.new as ChatSession : chat
@@ -89,6 +92,7 @@ export default function Sidebar({ totalTrees, onNewChat, onSignOut, userId, curr
             )
           } else if (payload.eventType === 'DELETE' && payload.old) {
             // Remove deleted session
+            console.log('Removing session from sidebar:', payload.old)
             setRecentChats(prev => prev.filter(chat => chat.id !== payload.old.id))
           }
         }
@@ -99,6 +103,13 @@ export default function Sidebar({ totalTrees, onNewChat, onSignOut, userId, curr
       sessionsSubscription.unsubscribe()
     }
   }, [loadChatSessions, supabase, userId])
+
+  // Expose refresh function for manual refresh
+  useEffect(() => {
+    if (onRefreshSessions) {
+      onRefreshSessions(loadChatSessions)
+    }
+  }, [onRefreshSessions, loadChatSessions])
 
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp)
