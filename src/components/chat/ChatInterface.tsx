@@ -171,6 +171,27 @@ export default function ChatInterface({
     return currentSession
   }
 
+  // Update session title with first message
+  const updateSessionTitle = async (sessionId: string, firstMessage: string) => {
+    try {
+      // Generate a title from first message (first 50 chars, cleaned up)
+      const title = firstMessage
+        .slice(0, 50)
+        .replace(/[^\w\s-]/g, '') // Remove special characters
+        .trim()
+        || 'New Chat'
+      
+      await supabase
+        .from('chat_sessions')
+        .update({ title })
+        .eq('id', sessionId)
+        
+      console.log('✅ Session title updated:', title)
+    } catch (error) {
+      console.error('Failed to update session title:', error)
+    }
+  }
+
   // Load messages for a selected session
   const loadSessionMessages = async (sessionId: string) => {
     try {
@@ -265,6 +286,11 @@ export default function ChatInterface({
       
       setMessages(prev => [...prev, assistantMsg])
       
+      // Update session title if this is the first message in the session
+      if (messages.length === 0) { // Before the user message was added
+        await updateSessionTitle(sessionId, userMessage)
+      }
+      
       // Optimistic tree count update with rollback capability
       if (data.treesAdded && data.treesAdded > 0) {
         console.log(`Adding ${data.treesAdded} trees to counter`) // Debug log
@@ -332,14 +358,32 @@ export default function ChatInterface({
     }
   }
 
-  const handleNewChat = () => {
-    setMessages([])
-    setCurrentSession(null)
-    
-    // Focus on input after starting new chat for better UX
-    setTimeout(() => {
-      inputRef.current?.focus()
-    }, 100)
+  const handleNewChat = async () => {
+    try {
+      // Clear current state
+      setMessages([])
+      setCurrentSession(null)
+      
+      // Create a new chat session immediately
+      const sessionId = await db.createChatSession(userId, 'New Chat')
+      if (sessionId) {
+        setCurrentSession(sessionId)
+        console.log('✅ New chat session created:', sessionId)
+        showToast('New conversation started', 'success')
+      } else {
+        console.error('❌ Failed to create new chat session')
+        showToast('Failed to start new conversation', 'error')
+      }
+      
+      // Focus on input after starting new chat for better UX
+      setTimeout(() => {
+        inputRef.current?.focus()
+      }, 100)
+      
+    } catch (error) {
+      console.error('Error creating new chat:', error)
+      showToast('Failed to start new conversation', 'error')
+    }
   }
 
   const handleSignOut = async () => {
