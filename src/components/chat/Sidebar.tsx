@@ -63,9 +63,11 @@ export default function Sidebar({ totalTrees, onNewChat, onSignOut, userId, curr
   }, [db, userId])
 
   useEffect(() => {
+    console.log('🔄 Sidebar: Loading chat sessions for user:', userId.substring(0, 8) + '...')
     loadChatSessions()
 
     // Set up real-time subscription for chat sessions
+    console.log('🔄 Sidebar: Setting up real-time subscription for user:', userId)
     const sessionsSubscription = supabase
       .channel('chat-sessions-changes')
       .on('postgres_changes',
@@ -76,7 +78,10 @@ export default function Sidebar({ totalTrees, onNewChat, onSignOut, userId, curr
           filter: `user_id=eq.${userId}`
         },
         (payload) => {
-          console.log('Real-time session update:', payload)
+          console.log('🔄 Real-time session update received:', payload)
+          console.log('🔄 Event type:', payload.eventType)
+          console.log('🔄 New data:', payload.new)
+          console.log('🔄 Old data:', payload.old)
           
           if (payload.eventType === 'INSERT' && payload.new) {
             // Add new session
@@ -97,9 +102,12 @@ export default function Sidebar({ totalTrees, onNewChat, onSignOut, userId, curr
           }
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        console.log('🔄 Supabase subscription status:', status)
+      })
 
     return () => {
+      console.log('🔄 Sidebar: Unsubscribing from real-time updates')
       sessionsSubscription.unsubscribe()
     }
   }, [loadChatSessions, supabase, userId])

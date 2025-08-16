@@ -361,26 +361,37 @@ export default function ChatInterface({
 
   const handleNewChat = async () => {
     try {
+      console.log('🆕 ChatInterface: handleNewChat called')
+      console.log('🆕 User ID:', userId.substring(0, 8) + '...')
+      console.log('🆕 Current session before:', currentSession)
+      
       // Clear current state
       setMessages([])
       setCurrentSession(null)
+      console.log('🆕 State cleared - messages and session reset')
       
       // Create a new chat session immediately
+      console.log('🆕 Calling db.createChatSession...')
       const sessionId = await db.createChatSession(userId, 'New Chat')
+      console.log('🆕 createChatSession returned:', sessionId)
+      
       if (sessionId) {
         setCurrentSession(sessionId)
-        console.log('✅ New chat session created:', sessionId)
+        console.log('✅ New chat session created and set:', sessionId)
         showToast('New conversation started', 'success')
         
         // Manually refresh sidebar sessions if real-time doesn't work
         setTimeout(() => {
+          console.log('🆕 Triggering manual sidebar refresh after 500ms')
           if (refreshSessionsRef.current) {
             console.log('🔄 Manually refreshing sidebar sessions')
             refreshSessionsRef.current()
+          } else {
+            console.warn('🆕 refreshSessionsRef.current is null')
           }
         }, 500)
       } else {
-        console.error('❌ Failed to create new chat session')
+        console.error('❌ Failed to create new chat session - sessionId is null')
         showToast('Failed to start new conversation', 'error')
       }
       

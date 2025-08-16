@@ -11,7 +11,7 @@ export const maxDuration = 30
 // Initialize Supabase client for server-side operations
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
 // Enhanced request validation
@@ -66,6 +66,17 @@ async function saveQueryToDatabase(
   impact: ImpactCalculation & { inputTokens: number; outputTokens: number }
 ) {
   try {
+    console.log('💾 Inserting into queries table with data:', {
+      user_id: userId.substring(0, 8) + '...',
+      session_id: sessionId.substring(0, 8) + '...',
+      user_message_length: userMessage.length,
+      assistant_message_length: assistantResponse.length,
+      input_tokens: inputTokens,
+      output_tokens: outputTokens,
+      trees_added: impact.trees,
+      model_used: model
+    })
+    
     const { data, error } = await supabase
       .from('queries')
       .insert({
@@ -87,7 +98,13 @@ async function saveQueryToDatabase(
       .single()
 
     if (error) {
-      console.error('Failed to save query to database:', error)
+      console.error('❌ Database insert failed with error:', error)
+      console.error('❌ Error details:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      })
       return null
     }
 
@@ -142,6 +159,8 @@ export async function POST(request: NextRequest) {
     const { message, model, sessionId, userId } = validateRequest(body)
     
     console.log('✅ Request validated, calling OpenAI...', { model, userId, sessionId })
+    console.log('📝 Message length:', message.length, 'characters')
+    console.log('🔑 Using Supabase service role key:', process.env.SUPABASE_SERVICE_ROLE_KEY?.substring(0, 20) + '...')
     
     // Initialize OpenAI
     const openai = new OpenAI({
@@ -183,6 +202,13 @@ export async function POST(request: NextRequest) {
     })
     
     // Save to database
+    console.log('💾 Attempting to save to database...', {
+      userId: userId.substring(0, 8) + '...',
+      sessionId: sessionId.substring(0, 8) + '...',
+      messageLength: message.length,
+      responseLength: responseContent.length
+    })
+    
     const queryId = await saveQueryToDatabase(
       userId,
       sessionId,
@@ -197,7 +223,7 @@ export async function POST(request: NextRequest) {
     if (queryId) {
       console.log('✅ Query saved to database with ID:', queryId)
     } else {
-      console.warn('⚠️ Failed to save query to database')
+      console.error('❌ CRITICAL: Failed to save query to database')
     }
     
     const responseTime = Date.now() - startTime
