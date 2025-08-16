@@ -154,13 +154,25 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🔥 Chat API called successfully')
     
+    // Check environment variables first
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('❌ SUPABASE_SERVICE_ROLE_KEY is missing!')
+      throw new Error('Server configuration error: Missing service role key')
+    }
+    
+    if (!process.env.OPENAI_API_KEY) {
+      console.error('❌ OPENAI_API_KEY is missing!')
+      throw new Error('Server configuration error: Missing OpenAI key')
+    }
+    
+    console.log('🔑 Environment check passed - service key present:', process.env.SUPABASE_SERVICE_ROLE_KEY.substring(0, 20) + '...')
+    
     // Parse and validate request
     const body = await request.json()
     const { message, model, sessionId, userId } = validateRequest(body)
     
-    console.log('✅ Request validated, calling OpenAI...', { model, userId, sessionId })
+    console.log('✅ Request validated, calling OpenAI...', { model, userId: userId.substring(0, 8) + '...', sessionId: sessionId.substring(0, 8) + '...' })
     console.log('📝 Message length:', message.length, 'characters')
-    console.log('🔑 Using Supabase service role key:', process.env.SUPABASE_SERVICE_ROLE_KEY?.substring(0, 20) + '...')
     
     // Initialize OpenAI
     const openai = new OpenAI({
@@ -256,12 +268,23 @@ export async function POST(request: NextRequest) {
     let statusCode = 500
     
     if (error instanceof Error) {
-      if (error.message.includes('API key')) {
+      console.error('❌ Error details:', {
+        message: error.message,
+        stack: error.stack?.substring(0, 200) + '...'
+      })
+      
+      if (error.message.includes('service role key') || error.message.includes('OpenAI key')) {
+        errorMessage = 'Server configuration error - please try again later'
+        statusCode = 503
+      } else if (error.message.includes('API key')) {
         errorMessage = 'OpenAI service configuration error'
         statusCode = 503
       } else if (error.message.includes('Message')) {
         errorMessage = error.message
         statusCode = 400
+      } else if (error.message.includes('fetch')) {
+        errorMessage = 'Network connection error'
+        statusCode = 502
       }
     }
     
