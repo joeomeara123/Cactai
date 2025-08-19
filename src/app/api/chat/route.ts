@@ -33,11 +33,15 @@ export async function POST(request: NextRequest) {
     } else if (cleanMessage.match(/^\d+\s*[x×]\s*\d+$/)) {
       // Handle math expressions like "3 x 44532"
       const parts = cleanMessage.split(/\s*[x×]\s*/)
-      if (parts.length === 2) {
+      if (parts.length === 2 && parts[0] && parts[1]) {
         const num1 = parseInt(parts[0])
         const num2 = parseInt(parts[1])
-        const result = num1 * num2
-        response = `I see you're doing some math! ${num1} × ${num2} = ${result.toLocaleString()}. Math and environmental conservation both require careful calculation! 🧮`
+        if (!isNaN(num1) && !isNaN(num2)) {
+          const result = num1 * num2
+          response = `I see you're doing some math! ${num1} × ${num2} = ${result.toLocaleString()}. Math and environmental conservation both require careful calculation! 🧮`
+        } else {
+          response = "I see you're working with numbers! That's great - precision is important in both math and environmental science."
+        }
       } else {
         response = "I see you're working with numbers! That's great - precision is important in both math and environmental science."
       }
@@ -49,7 +53,8 @@ export async function POST(request: NextRequest) {
         "I appreciate your message! While I'm in test mode, our conversation is still making a positive environmental impact.",
         "Great to hear from you! CactAI is working to combine AI conversations with environmental action."
       ]
-      response = responses[Math.floor(Math.random() * responses.length)]
+      const randomIndex = Math.floor(Math.random() * responses.length)
+      response = responses[randomIndex] || "Thank you for chatting with CactAI!"
     }
     
     return NextResponse.json({
