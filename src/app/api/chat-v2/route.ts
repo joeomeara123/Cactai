@@ -5,10 +5,10 @@ export const maxDuration = 30
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🔥 PRODUCTION API v2.1 - Math calculation enabled')
+    console.log('🚀 NEW CHAT V2 API - MATH ENABLED')
     
     const body = await request.json()
-    console.log('📝 Received body:', body)
+    console.log('📝 V2 Received body:', body)
     
     // Basic validation
     const { message, model, sessionId, userId } = body
@@ -19,17 +19,13 @@ export async function POST(request: NextRequest) {
     
     // Clean the message and create a proper response
     const cleanMessage = typeof message === 'string' ? message.trim() : String(message).trim()
-    console.log('🔍 Clean message:', cleanMessage)
+    console.log('🔍 V2 Clean message:', cleanMessage)
     
     // Generate contextual responses based on the message content
     let response: string
     
     if (cleanMessage.toLowerCase().includes('hello') || cleanMessage.toLowerCase().includes('hi')) {
-      response = "Hello! Welcome to CactAI. I'm currently running in test mode, but I can chat with you and we'll plant trees together!"
-    } else if (cleanMessage.toLowerCase().includes('how') && cleanMessage.toLowerCase().includes('work')) {
-      response = "Great question! CactAI works by using AI conversations to generate funds for environmental causes. Every message we exchange helps plant trees!"
-    } else if (cleanMessage.toLowerCase().includes('tree')) {
-      response = "I love talking about trees! 🌳 With every conversation, we're contributing to reforestation efforts. Each message plants approximately 0.0123 trees!"
+      response = "Hello! This is the NEW V2 API. I can do math and chat properly!"
     } else if (cleanMessage.match(/^\d+\s*[x×]\s*\d+$/)) {
       // Handle math expressions like "3 x 44532"
       const parts = cleanMessage.split(/\s*[x×]\s*/)
@@ -38,23 +34,15 @@ export async function POST(request: NextRequest) {
         const num2 = parseInt(parts[1])
         if (!isNaN(num1) && !isNaN(num2)) {
           const result = num1 * num2
-          response = `I see you're doing some math! ${num1} × ${num2} = ${result.toLocaleString()}. Math and environmental conservation both require careful calculation! 🧮`
+          response = `NEW V2: ${num1} × ${num2} = ${result.toLocaleString()}! 🧮 Math works perfectly!`
         } else {
-          response = "I see you're working with numbers! That's great - precision is important in both math and environmental science."
+          response = "V2: I see numbers but couldn't calculate them properly."
         }
       } else {
-        response = "I see you're working with numbers! That's great - precision is important in both math and environmental science."
+        response = "V2: I see you're working with numbers!"
       }
     } else {
-      // General responses for other messages
-      const responses = [
-        "That's interesting! I'm currently in test mode, but I'm learning from our conversation and planting trees at the same time.",
-        "Thank you for chatting with me! Every message helps support environmental causes through CactAI.",
-        "I appreciate your message! While I'm in test mode, our conversation is still making a positive environmental impact.",
-        "Great to hear from you! CactAI is working to combine AI conversations with environmental action."
-      ]
-      const randomIndex = Math.floor(Math.random() * responses.length)
-      response = responses[randomIndex] || "Thank you for chatting with CactAI!"
+      response = `NEW V2 API received: "${cleanMessage}" - This is working correctly!`
     }
     
     return NextResponse.json({
@@ -66,7 +54,8 @@ export async function POST(request: NextRequest) {
       donation: 0.00004,
       model: model || 'gpt-4o-mini',
       responseTimeMs: 100,
-      queryId: 'test-query-123'
+      queryId: 'v2-query-' + Date.now(),
+      apiVersion: 'V2'
     }, {
       headers: {
         'Access-Control-Allow-Origin': '*',
@@ -76,12 +65,13 @@ export async function POST(request: NextRequest) {
     })
     
   } catch (error) {
-    console.error('❌ Chat API Error:', error)
+    console.error('❌ V2 Chat API Error:', error)
     
     return NextResponse.json(
       { 
-        error: 'Chat API failed',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        error: 'V2 Chat API failed',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        apiVersion: 'V2'
       },
       { 
         status: 500,
