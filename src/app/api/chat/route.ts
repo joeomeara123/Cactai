@@ -17,8 +17,19 @@ export async function POST(request: NextRequest) {
       throw new Error('Missing required fields')
     }
     
-    // Simulate a simple response
-    const response = `Hello! You said: "${message}". This is a test response from the chat API.`
+    // Clean the message and create a proper response
+    const cleanMessage = typeof message === 'string' ? message.trim() : String(message).trim()
+    console.log('🔍 Clean message:', cleanMessage)
+    
+    // Generate a more natural test response
+    const responses = [
+      `Thanks for your message! I'm currently in test mode, but I can see you wrote: "${cleanMessage}"`,
+      `Hello! I received your message about "${cleanMessage}". The AI system is working correctly.`,
+      `Great! Your message "${cleanMessage}" came through successfully. This is a test response while we set up the full AI integration.`,
+      `I can see your message: "${cleanMessage}". The chat system is working, and we're planting trees with each conversation!`
+    ]
+    
+    const response = responses[Math.floor(Math.random() * responses.length)]
     
     return NextResponse.json({
       response: response,
