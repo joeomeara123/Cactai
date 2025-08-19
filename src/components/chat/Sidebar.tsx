@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { TreePine, Plus, MessageSquare, Settings, LogOut, Edit2, Trash2 } from 'lucide-react'
-import { createClientSupabaseClient } from '@/lib/supabase-client'
 import type { ChatSession } from '@/types'
 
 // Utility to join class names cleanly
@@ -41,98 +40,45 @@ export default function Sidebar({ totalTrees, onNewChat, onSignOut, userId, curr
   const [editingChatId, setEditingChatId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
 
-  const supabase = createClientSupabaseClient()
 
-  const loadChatSessions = useCallback(async () => {
-    try {
-      setIsLoadingChats(true)
-      console.log('🔄 Loading chat sessions for user:', userId)
-      
-      // For now, always use mock data since we're in simplified mode
-      console.log('📝 Using mock data in simplified mode')
-      const sessions = [
-        {
-          id: 'mock-1',
-          user_id: userId,
-          title: 'Current Chat',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        },
-        {
-          id: 'mock-2',
-          user_id: userId,
-          title: 'Previous Chat',
-          created_at: new Date(Date.now() - 3600000).toISOString(),
-          updated_at: new Date(Date.now() - 3600000).toISOString()
-        },
-        {
-          id: 'mock-3',
-          user_id: userId,
-          title: 'Earlier Chat',
-          created_at: new Date(Date.now() - 7200000).toISOString(),
-          updated_at: new Date(Date.now() - 7200000).toISOString()
-        }
-      ]
-      
-      setRecentChats(sessions)
-      console.log('✅ Mock sessions loaded:', sessions.length)
-    } catch (error) {
-      console.error('❌ Failed to load chat sessions:', error)
-      setRecentChats([])
-    } finally {
-      setIsLoadingChats(false)
-    }
+  const loadChatSessions = useCallback(() => {
+    console.log('📝 Loading static mock sessions')
+    setIsLoadingChats(true)
+    
+    // Use static mock data to prevent infinite loops
+    const sessions = [
+      {
+        id: 'mock-1',
+        user_id: userId,
+        title: 'Current Chat',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: 'mock-2', 
+        user_id: userId,
+        title: 'Previous Chat',
+        created_at: new Date(Date.now() - 3600000).toISOString(),
+        updated_at: new Date(Date.now() - 3600000).toISOString()
+      },
+      {
+        id: 'mock-3',
+        user_id: userId,
+        title: 'Earlier Chat', 
+        created_at: new Date(Date.now() - 7200000).toISOString(),
+        updated_at: new Date(Date.now() - 7200000).toISOString()
+      }
+    ]
+    
+    setRecentChats(sessions)
+    setIsLoadingChats(false)
+    console.log('✅ Static mock sessions loaded:', sessions.length)
   }, [userId])
 
   useEffect(() => {
-    console.log('🔄 Sidebar: Loading chat sessions for user:', userId.substring(0, 8) + '...')
+    console.log('🔄 Sidebar: Initializing with mock data for user:', userId.substring(0, 8) + '...')
     loadChatSessions()
-
-    // Set up real-time subscription for chat sessions
-    console.log('🔄 Sidebar: Setting up real-time subscription for user:', userId)
-    const sessionsSubscription = supabase
-      .channel('chat-sessions-changes')
-      .on('postgres_changes',
-        {
-          event: '*',
-          schema: 'public', 
-          table: 'chat_sessions',
-          filter: `user_id=eq.${userId}`
-        },
-        (payload) => {
-          console.log('🔄 Real-time session update received:', payload)
-          console.log('🔄 Event type:', payload.eventType)
-          console.log('🔄 New data:', payload.new)
-          console.log('🔄 Old data:', payload.old)
-          
-          if (payload.eventType === 'INSERT' && payload.new) {
-            // Add new session
-            console.log('Adding new session to sidebar:', payload.new)
-            setRecentChats(prev => [payload.new as ChatSession, ...prev])
-          } else if (payload.eventType === 'UPDATE' && payload.new) {
-            // Update existing session
-            console.log('Updating session in sidebar:', payload.new)
-            setRecentChats(prev => 
-              prev.map(chat => 
-                chat.id === payload.new.id ? payload.new as ChatSession : chat
-              )
-            )
-          } else if (payload.eventType === 'DELETE' && payload.old) {
-            // Remove deleted session
-            console.log('Removing session from sidebar:', payload.old)
-            setRecentChats(prev => prev.filter(chat => chat.id !== payload.old.id))
-          }
-        }
-      )
-      .subscribe((status) => {
-        console.log('🔄 Supabase subscription status:', status)
-      })
-
-    return () => {
-      console.log('🔄 Sidebar: Unsubscribing from real-time updates')
-      sessionsSubscription.unsubscribe()
-    }
-  }, [loadChatSessions, supabase, userId])
+  }, [loadChatSessions, userId])
 
   // Expose refresh function for manual refresh
   useEffect(() => {
@@ -161,24 +107,12 @@ export default function Sidebar({ totalTrees, onNewChat, onSignOut, userId, curr
   }
 
   const handleEditSave = async (chatId: string) => {
-    try {
-      // Update chat session title in database
-      const { error } = await supabase
-        .from('chat_sessions')
-        .update({ title: editingTitle })
-        .eq('id', chatId)
-
-      if (!error) {
-        // Update local state
-        setRecentChats(prev => 
-          prev.map(chat => 
-            chat.id === chatId ? { ...chat, title: editingTitle } : chat
-          )
-        )
-      }
-    } catch (error) {
-      console.error('Failed to update chat title:', error)
-    }
+    // For mock data, just update local state
+    setRecentChats(prev => 
+      prev.map(chat => 
+        chat.id === chatId ? { ...chat, title: editingTitle } : chat
+      )
+    )
     setEditingChatId(null)
     setEditingTitle('')
   }
@@ -189,38 +123,12 @@ export default function Sidebar({ totalTrees, onNewChat, onSignOut, userId, curr
   }
 
   const handleDeleteChat = async (chatId: string) => {
-    // Optimistic update - remove from UI immediately
-    const chatToDelete = recentChats.find(chat => chat.id === chatId)
+    // For mock data, just remove from local state
     setRecentChats(prev => prev.filter(chat => chat.id !== chatId))
     
-    try {
-      const { error } = await supabase
-        .from('chat_sessions')
-        .delete()
-        .eq('id', chatId)
-
-      if (error) {
-        // Rollback on error
-        if (chatToDelete) {
-          setRecentChats(prev => [...prev, chatToDelete].sort((a, b) => 
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-          ))
-        }
-        console.error('Failed to delete chat:', error)
-      } else {
-        // If we deleted the current session, start a new chat
-        if (currentSessionId === chatId) {
-          onNewChat()
-        }
-      }
-    } catch (error) {
-      // Rollback on error
-      if (chatToDelete) {
-        setRecentChats(prev => [...prev, chatToDelete].sort((a, b) => 
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        ))
-      }
-      console.error('Failed to delete chat:', error)
+    // If we deleted the current session, start a new chat
+    if (currentSessionId === chatId) {
+      onNewChat()
     }
   }
 
