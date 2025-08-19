@@ -5,7 +5,7 @@ export const maxDuration = 30
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🔥 Chat API called successfully')
+    console.log('🔥 Chat API called successfully - Latest Version v2.1')
     
     const body = await request.json()
     console.log('📝 Received body:', body)
