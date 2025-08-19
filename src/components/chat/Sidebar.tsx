@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { TreePine, Plus, MessageSquare, Settings, LogOut, Edit2, Trash2 } from 'lucide-react'
 import { createClientSupabaseClient } from '@/lib/supabase-client'
-import { createDatabaseClient } from '@/lib/database-client'
 import type { ChatSession } from '@/types'
 
 // Utility to join class names cleanly
@@ -43,7 +42,6 @@ export default function Sidebar({ totalTrees, onNewChat, onSignOut, userId, curr
   const [editingTitle, setEditingTitle] = useState('')
 
   const supabase = createClientSupabaseClient()
-  const db = createDatabaseClient(supabase)
 
   const loadChatSessions = useCallback(async () => {
     try {
