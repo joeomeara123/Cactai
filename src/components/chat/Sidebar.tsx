@@ -1,10 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { TreePine, Plus, MessageSquare, Settings, LogOut, Edit2, Trash2 } from 'lucide-react'
 import type { ChatSession } from '@/types'
 
-// Utility to join class names cleanly
 const cn = (...classes: string[]) => classes.filter(Boolean).join(' ')
 
 interface SidebarProps {
@@ -17,8 +16,6 @@ interface SidebarProps {
   onRefreshSessions?: (refreshFn: () => void) => void
 }
 
-
-// Utility functions for tree count formatting
 function formatTreeCount(trees: number): string {
   if (trees >= 1) return trees.toFixed(2)
   if (trees >= 0.1) return trees.toFixed(3)
@@ -34,58 +31,45 @@ function getTreeMessage(trees: number): string {
   return 'Start chatting to plant trees 🌱'
 }
 
-export default function Sidebar({ totalTrees, onNewChat, onSignOut, userId, currentSessionId, onSessionSelect, onRefreshSessions }: SidebarProps) {
+export default function Sidebar({ totalTrees, onNewChat, onSignOut, userId, currentSessionId, onSessionSelect }: SidebarProps) {
   const [recentChats, setRecentChats] = useState<ChatSession[]>([])
-  const [isLoadingChats, setIsLoadingChats] = useState(true)
+  const [isLoadingChats, setIsLoadingChats] = useState(false)
   const [editingChatId, setEditingChatId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
 
-
-  const loadChatSessions = useCallback(() => {
-    console.log('📝 Loading static mock sessions')
+  // STATIC MOCK DATA ONLY - NO DATABASE CALLS
+  useEffect(() => {
+    console.log('🔧 Sidebar: Loading STATIC mock data only')
     setIsLoadingChats(true)
     
-    // Use static mock data to prevent infinite loops
-    const sessions = [
+    const mockSessions: ChatSession[] = [
       {
-        id: 'mock-1',
+        id: 'static-1',
         user_id: userId,
-        title: 'Current Chat',
+        title: 'Math Chat',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       },
       {
-        id: 'mock-2', 
+        id: 'static-2',
         user_id: userId,
-        title: 'Previous Chat',
+        title: 'Tree Discussion',
         created_at: new Date(Date.now() - 3600000).toISOString(),
         updated_at: new Date(Date.now() - 3600000).toISOString()
       },
       {
-        id: 'mock-3',
+        id: 'static-3',
         user_id: userId,
-        title: 'Earlier Chat', 
+        title: 'Environmental Chat',
         created_at: new Date(Date.now() - 7200000).toISOString(),
         updated_at: new Date(Date.now() - 7200000).toISOString()
       }
     ]
     
-    setRecentChats(sessions)
+    setRecentChats(mockSessions)
     setIsLoadingChats(false)
-    console.log('✅ Static mock sessions loaded:', sessions.length)
+    console.log('✅ Static mock sessions set:', mockSessions.length)
   }, [userId])
-
-  useEffect(() => {
-    console.log('🔄 Sidebar: Initializing with mock data for user:', userId.substring(0, 8) + '...')
-    loadChatSessions()
-  }, [loadChatSessions, userId])
-
-  // Expose refresh function for manual refresh
-  useEffect(() => {
-    if (onRefreshSessions) {
-      onRefreshSessions(loadChatSessions)
-    }
-  }, [onRefreshSessions, loadChatSessions])
 
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp)
@@ -106,8 +90,7 @@ export default function Sidebar({ totalTrees, onNewChat, onSignOut, userId, curr
     setEditingTitle(currentTitle)
   }
 
-  const handleEditSave = async (chatId: string) => {
-    // For mock data, just update local state
+  const handleEditSave = (chatId: string) => {
     setRecentChats(prev => 
       prev.map(chat => 
         chat.id === chatId ? { ...chat, title: editingTitle } : chat
@@ -122,11 +105,8 @@ export default function Sidebar({ totalTrees, onNewChat, onSignOut, userId, curr
     setEditingTitle('')
   }
 
-  const handleDeleteChat = async (chatId: string) => {
-    // For mock data, just remove from local state
+  const handleDeleteChat = (chatId: string) => {
     setRecentChats(prev => prev.filter(chat => chat.id !== chatId))
-    
-    // If we deleted the current session, start a new chat
     if (currentSessionId === chatId) {
       onNewChat()
     }
@@ -141,7 +121,6 @@ export default function Sidebar({ totalTrees, onNewChat, onSignOut, userId, curr
           <h1 className="text-xl font-bold text-green-400">CactAI</h1>
         </div>
         
-        {/* New Chat Button */}
         <button
           onClick={onNewChat}
           className="w-full flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
@@ -173,7 +152,6 @@ export default function Sidebar({ totalTrees, onNewChat, onSignOut, userId, curr
           <h3 className="text-sm font-medium text-gray-400 mb-3">Recent</h3>
           <div className="space-y-1">
             {isLoadingChats ? (
-              // Loading skeleton
               Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} className="px-3 py-2 rounded-lg">
                   <div className="flex items-center gap-3">
@@ -186,14 +164,12 @@ export default function Sidebar({ totalTrees, onNewChat, onSignOut, userId, curr
                 </div>
               ))
             ) : recentChats.length === 0 ? (
-              // Empty state
               <div className="text-center py-8">
                 <MessageSquare className="w-8 h-8 text-gray-600 mx-auto mb-2" />
                 <p className="text-sm text-gray-500">No conversations yet</p>
                 <p className="text-xs text-gray-600">Start chatting to see your history</p>
               </div>
             ) : (
-              // Chat list
               recentChats.map((chat) => (
                 <div
                   key={chat.id}
