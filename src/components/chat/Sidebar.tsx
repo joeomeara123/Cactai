@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { TreePine, Plus, MessageSquare, Settings, LogOut, Edit2, Trash2 } from 'lucide-react'
 import { createClientSupabaseClient } from '@/lib/supabase-client'
 import { createDatabaseClient } from '@/lib/database-client'
+import type { ChatSession } from '@/types'
 
 // Utility to join class names cleanly
 const cn = (...classes: string[]) => classes.filter(Boolean).join(' ')
@@ -18,12 +19,6 @@ interface SidebarProps {
   onRefreshSessions?: (refreshFn: () => void) => void
 }
 
-interface ChatSession {
-  id: string
-  title: string
-  created_at: string
-  message_count?: number
-}
 
 // Utility functions for tree count formatting
 function formatTreeCount(trees: number): string {
@@ -65,15 +60,17 @@ export default function Sidebar({ totalTrees, onNewChat, onSignOut, userId, curr
         sessions = [
           {
             id: 'mock-1',
+            user_id: userId,
             title: 'Test Conversation',
             created_at: new Date().toISOString(),
-            message_count: 2
+            updated_at: new Date().toISOString()
           },
           {
-            id: 'mock-2', 
+            id: 'mock-2',
+            user_id: userId,
             title: 'Previous Chat',
             created_at: new Date(Date.now() - 3600000).toISOString(),
-            message_count: 1
+            updated_at: new Date(Date.now() - 3600000).toISOString()
           }
         ]
       }
