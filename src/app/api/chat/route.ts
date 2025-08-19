@@ -21,15 +21,36 @@ export async function POST(request: NextRequest) {
     const cleanMessage = typeof message === 'string' ? message.trim() : String(message).trim()
     console.log('🔍 Clean message:', cleanMessage)
     
-    // Generate a more natural test response
-    const responses = [
-      `Thanks for your message! I'm currently in test mode, but I can see you wrote: "${cleanMessage}"`,
-      `Hello! I received your message about "${cleanMessage}". The AI system is working correctly.`,
-      `Great! Your message "${cleanMessage}" came through successfully. This is a test response while we set up the full AI integration.`,
-      `I can see your message: "${cleanMessage}". The chat system is working, and we're planting trees with each conversation!`
-    ]
+    // Generate contextual responses based on the message content
+    let response: string
     
-    const response = responses[Math.floor(Math.random() * responses.length)]
+    if (cleanMessage.toLowerCase().includes('hello') || cleanMessage.toLowerCase().includes('hi')) {
+      response = "Hello! Welcome to CactAI. I'm currently running in test mode, but I can chat with you and we'll plant trees together!"
+    } else if (cleanMessage.toLowerCase().includes('how') && cleanMessage.toLowerCase().includes('work')) {
+      response = "Great question! CactAI works by using AI conversations to generate funds for environmental causes. Every message we exchange helps plant trees!"
+    } else if (cleanMessage.toLowerCase().includes('tree')) {
+      response = "I love talking about trees! 🌳 With every conversation, we're contributing to reforestation efforts. Each message plants approximately 0.0123 trees!"
+    } else if (cleanMessage.match(/^\d+\s*[x×]\s*\d+$/)) {
+      // Handle math expressions like "3 x 44532"
+      const parts = cleanMessage.split(/\s*[x×]\s*/)
+      if (parts.length === 2) {
+        const num1 = parseInt(parts[0])
+        const num2 = parseInt(parts[1])
+        const result = num1 * num2
+        response = `I see you're doing some math! ${num1} × ${num2} = ${result.toLocaleString()}. Math and environmental conservation both require careful calculation! 🧮`
+      } else {
+        response = "I see you're working with numbers! That's great - precision is important in both math and environmental science."
+      }
+    } else {
+      // General responses for other messages
+      const responses = [
+        "That's interesting! I'm currently in test mode, but I'm learning from our conversation and planting trees at the same time.",
+        "Thank you for chatting with me! Every message helps support environmental causes through CactAI.",
+        "I appreciate your message! While I'm in test mode, our conversation is still making a positive environmental impact.",
+        "Great to hear from you! CactAI is working to combine AI conversations with environmental action."
+      ]
+      response = responses[Math.floor(Math.random() * responses.length)]
+    }
     
     return NextResponse.json({
       response: response,

@@ -50,41 +50,41 @@ export default function Sidebar({ totalTrees, onNewChat, onSignOut, userId, curr
       setIsLoadingChats(true)
       console.log('🔄 Loading chat sessions for user:', userId)
       
-      // Try to load from database first
-      let sessions = await db.getChatSessions(userId)
-      console.log('📊 Loaded sessions from DB:', sessions)
-      
-      // If no sessions found, create some mock data for testing
-      if (!sessions || sessions.length === 0) {
-        console.log('📝 No sessions found, creating mock data')
-        sessions = [
-          {
-            id: 'mock-1',
-            user_id: userId,
-            title: 'Test Conversation',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          },
-          {
-            id: 'mock-2',
-            user_id: userId,
-            title: 'Previous Chat',
-            created_at: new Date(Date.now() - 3600000).toISOString(),
-            updated_at: new Date(Date.now() - 3600000).toISOString()
-          }
-        ]
-      }
+      // For now, always use mock data since we're in simplified mode
+      console.log('📝 Using mock data in simplified mode')
+      const sessions = [
+        {
+          id: 'mock-1',
+          user_id: userId,
+          title: 'Current Chat',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        {
+          id: 'mock-2',
+          user_id: userId,
+          title: 'Previous Chat',
+          created_at: new Date(Date.now() - 3600000).toISOString(),
+          updated_at: new Date(Date.now() - 3600000).toISOString()
+        },
+        {
+          id: 'mock-3',
+          user_id: userId,
+          title: 'Earlier Chat',
+          created_at: new Date(Date.now() - 7200000).toISOString(),
+          updated_at: new Date(Date.now() - 7200000).toISOString()
+        }
+      ]
       
       setRecentChats(sessions)
+      console.log('✅ Mock sessions loaded:', sessions.length)
     } catch (error) {
       console.error('❌ Failed to load chat sessions:', error)
-      
-      // Fallback to empty array to clear loading state
       setRecentChats([])
     } finally {
       setIsLoadingChats(false)
     }
-  }, [db, userId])
+  }, [userId])
 
   useEffect(() => {
     console.log('🔄 Sidebar: Loading chat sessions for user:', userId.substring(0, 8) + '...')
